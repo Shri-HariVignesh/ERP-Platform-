@@ -114,15 +114,53 @@ class InputHardeningTest extends EngineTestBase {
                 .doesNotContain(repeat(1_000));
     }
 
-    /*
-     * F5 (LOW, CWE-209) is BLOCKED, not fixed. The IllegalTransitionException handler returns
-     * e.getMessage() as the response body, so a denied cross-tenant download answers
-     * "document not visible in scope". Removing that echo breaks CrossTenantWebTest line 61,
-     * which asserts the body CONTAINS that phrase — an existing test pins the behaviour, and
-     * weakening a test to land a fix is not allowed here. See docs/SECURITY.md.
-     *
-     * The residual exposure is small: the string is fixed, identical whether or not the id
-     * exists, so it is not an existence oracle and carries no PII. CrossTenantWebTest already
-     * asserts the denial leaks neither the serial nor the holder's name.
+    /* ---- F5 ---- */
+
+    /**
+     * F5 (LOW, CWE-209): the handler returned e.getMessage() as the response body, so a denied
+     * cross-tenant download answered "document not visible in scope". This was BLOCKED for one
+     * iteration because CrossTenantWebTest asserted the body CONTAINED that phrase; the owner
+     * then chose to change that assertion, so the leak is closed and pinned here too.
      */
+    @Test
+    @DisplayName("a denied download does not echo the engine's own words back")
+    void deniedDownloadDoesNotLeakInternalMessage() throws Exception {
+        MockHttpSession meera = new MockHttpSession();
+        mvc.perform(post("/switch").param("studentId", "s_meera").session(meera));
+
+        int denials = 0;
+        for (long id = 1; id <= 8; id++) {
+            var res = mvc.perform(get("/documents/" + id + "/download").session(meera))
+                    .andReturn().getResponse();
+            if (res.getStatus() == 200) continue;          // Meera's own document
+            denials++;
+            assertThat(res.getContentAsString())
+                    .as("denial body for id %d must not carry engine vocabulary", id)
+                    .doesNotContain("not visible in scope")
+                    .doesNotContain("tenant")
+                    .doesNotContain("IllegalTransition");
+        }
+        assertThat(denials).as("the probe must actually have been denied something").isPositive();
+    }
+
+    /**
+     * The refusal must still be a refusal — a generic body is only an improvement if the
+     * document itself is still withheld.
+     */
+    @Test
+    @DisplayName("the generic denial still withholds the document")
+    void deniedDownloadStillWithholdsContent() throws Exception {
+        MockHttpSession meera = new MockHttpSession();
+        mvc.perform(post("/switch").param("studentId", "s_meera").session(meera));
+
+        for (long id = 1; id <= 8; id++) {
+            var res = mvc.perform(get("/documents/" + id + "/download").session(meera))
+                    .andReturn().getResponse();
+            if (res.getStatus() == 200) continue;
+            assertThat(res.getStatus()).isEqualTo(400);
+            assertThat(res.getContentAsString())
+                    .doesNotContain("Hari Prasad").doesNotContain("SNIT21CS042")
+                    .doesNotContain("bonafide").doesNotContain("<article");
+        }
+    }
 }

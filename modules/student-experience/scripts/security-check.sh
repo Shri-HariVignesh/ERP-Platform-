@@ -123,6 +123,10 @@ check "system-only docType refused" \
            -d 'docType=INTERNSHIP_VERIFICATION&purpose=x&copies=1' \
          | grep -c 'not one a student can request')" "1"
 
+# --- F5 error-message disclosure ---
+check "denial body carries no engine vocabulary" \
+      "$(curl -s -b "$JAR_MEERA" "${BASE}/documents/1/download" | grep -c 'not visible in scope')" "0"
+
 # --- F1 verify-id keyspace ---
 check "verify id keeps a >=12 symbol random suffix" \
       "$(curl -s -b "$JAR_HARI" "${BASE}/academic" | grep -oE 'SNIT-[0-9]{4}-[A-Z0-9]+' | head -1 \

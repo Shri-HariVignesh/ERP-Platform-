@@ -1,7 +1,7 @@
 # Security — Student Experience Portal
 
-Audited across the fourteen dimensions listed below over five iterations. **6 findings fixed,
-1 BLOCKED, 5 residual by design.** Not a claim that the module is secure — a record of what
+Audited across the fourteen dimensions listed below over five iterations. **7 findings fixed,
+0 BLOCKED, 5 residual by design.** Not a claim that the module is secure — a record of what
 was probed, what was reproduced, and what was left standing on purpose.
 
 Threat model: [`THREAT_MODEL.md`](THREAT_MODEL.md).
@@ -11,9 +11,9 @@ Threat model: [`THREAT_MODEL.md`](THREAT_MODEL.md).
 ```bash
 cd modules/student-experience
 
-mvn test                              # full suite — 103 tests
-mvn test -Dgroups=security            # security-tagged group — 42 tests
-./scripts/security-check.sh           # both suites + 25 live probes against a booted app
+mvn test                              # full suite — 105 tests
+mvn test -Dgroups=security            # security-tagged group — 44 tests
+./scripts/security-check.sh           # both suites + 26 live probes against a booted app
 SKIP_BUILD=1 ./scripts/security-check.sh   # probes only, app already running
 ```
 
@@ -35,7 +35,7 @@ below their pinned versions.
 | **High** | IDOR, reflected XSS, dependency RCE, meaningful information disclosure |
 | **Medium** | Missing headers, a CSRF gap, log or audit-trail integrity, availability, misleading display |
 | **Low** | Cosmetic, or internal detail with no practical consequence |
-| **BLOCKED** | A real finding whose fix would require changing the frozen contract or weakening a test |
+| **BLOCKED** | A real finding whose fix would require changing the frozen contract or weakening a test (none open) |
 
 ## Findings
 
@@ -47,7 +47,7 @@ below their pinned versions.
 | F4 | Medium | CWE-248, CWE-20 / A05 | Uncaught `DateTimeParseException` → HTTP 500 | Fixed |
 | F6 | Medium | CWE-117 / A09 | A request id could author its own log records | Fixed |
 | F7 | Medium | CWE-1395 / A06 | Tomcat 10.1.46 below the 10.1.55 advisory floor | Fixed |
-| F5 | Low | CWE-209 / A05 | Error handler echoes the internal exception message | **BLOCKED** |
+| F5 | Low | CWE-209 / A05 | Error handler echoed the internal exception message | Fixed |
 
 ### F1 — Verification ids were guessable bearer capabilities (High)
 `/verify` is unauthenticated by design and returns a student's name, institution and credential
@@ -98,19 +98,25 @@ whose claim is a complete, tamper-evident audit trail, a caller who can author l
 fabricate history or bury their own activity. Fixed with
 `RequestStateMachine.safeForMessage` (strips control characters, caps at 64).
 
-### F5 — BLOCKED: error handler echoes the internal message (Low)
-`GlobalErrors` returns `e.getMessage()` as the response body, so a denied cross-tenant download
-answers `document not visible in scope`. The handler's own javadoc claims the message is
-"logged, not echoed", which is wrong.
+### F5 — Error handler echoed the internal message (Low)
+`GlobalErrors` returned `e.getMessage()` as the response body, so a denied cross-tenant
+download answered `document not visible in scope`. The handler's own javadoc claimed the
+message was "logged, not echoed", which was wrong.
 
-The one-line fix is blocked because **`CrossTenantWebTest` line 61 asserts the body *contains*
-that phrase** — an existing test pins the current behaviour, and weakening a test to land a fix
-is not permitted. The change was written, reverted, and recorded here instead.
+This was **BLOCKED for one iteration**: `CrossTenantWebTest` asserted the body *contained* that
+phrase, pinning the leak as expected behaviour, and weakening a test to land a fix is not a
+call to make unilaterally. The owner then decided the assertion should change, so the fix
+landed.
 
-Residual exposure is small and bounded: the string is fixed and identical whether or not the id
-exists, so it is not an existence oracle, and the same test already proves the denial leaks
-neither the serial nor the holder's name. Resolving it needs the test owner to agree the
-assertion should change.
+The assertion was inverted rather than deleted — it now asserts the denial body carries no
+engine vocabulary — and two tests were added: one that every denial stays free of internals,
+one that the generic body still actually withholds the document. The refusal, which is what
+the test existed to prove, is still asserted.
+
+The exception message itself is unchanged, so the engine-level assertions in `ScopingTest`
+(which match the message, not the HTTP body) were untouched and still pass. Verified live: the
+client reads `That request is not available.` while the operator still gets
+`IllegalTransitionException: document not visible in scope` in the log.
 
 ## Dimensions probed clean
 

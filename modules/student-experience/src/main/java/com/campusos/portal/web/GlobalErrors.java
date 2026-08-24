@@ -16,13 +16,21 @@ public class GlobalErrors {
 
     /**
      * An illegal move never silently passes — it surfaces as a 400.
-     * SECURITY: the internal exception type is logged, not echoed to the client.
+     *
+     * SECURITY (CWE-209): the internal exception MESSAGE is logged, never returned. It used to
+     * be the response body, so probing /documents/{id}/download for another tenant's ids
+     * answered "document not visible in scope" — engine vocabulary handed to whoever asked.
+     * Guard messages elsewhere also name a request's current state and which actors may act on
+     * it. The caller learns the move was refused; the operator gets the reason from the log.
+     *
+     * The exception message itself is unchanged, so the engine-level assertions in ScopingTest
+     * still hold — this narrows what crosses the HTTP boundary, nothing else.
      */
     @ExceptionHandler(IllegalTransitionException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public String illegal(IllegalTransitionException e) {
         log.warn("IllegalTransitionException: {}", e.getMessage());
-        return e.getMessage();
+        return "That request is not available.";
     }
 }

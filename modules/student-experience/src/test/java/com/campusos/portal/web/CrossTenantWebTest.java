@@ -60,7 +60,14 @@ class CrossTenantWebTest extends EngineTestBase {
 
         assertThat(res.getResponse().getStatus()).isEqualTo(400);
         String body = res.getResponse().getContentAsString();
-        assertThat(body).contains("not visible in scope");
+        // Was: contains("not visible in scope"). That pinned an information leak (CWE-209) as
+        // expected behaviour — the handler returned the engine's own message as the response
+        // body, so probing another tenant's ids was answered in engine vocabulary. The refusal
+        // is what this test is for, and the refusal is still asserted above; what the refusal
+        // SAYS is now asserted to be free of internals.
+        assertThat(body).doesNotContain("not visible in scope");
+        assertThat(body).doesNotContain("tenant");
+        assertThat(body).doesNotContain("IllegalTransition");
         assertThat(body).doesNotContain(his.serialNo);
         assertThat(body).doesNotContain("Hari Prasad");
     }
