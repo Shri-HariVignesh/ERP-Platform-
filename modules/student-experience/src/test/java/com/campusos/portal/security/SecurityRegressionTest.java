@@ -11,6 +11,7 @@ import com.campusos.portal.engine.EngineTestBase;
 import com.campusos.portal.payload.DocumentPayload;
 import com.campusos.portal.payload.PayloadCodec;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * Each test here fails on the vulnerable code and passes after its fix. They EXTEND the
  * existing suite; nothing in the original 63 was changed or weakened.
  */
+@Tag("security")
 class SecurityRegressionTest extends EngineTestBase {
 
     private static final String HARI = "s_hari";

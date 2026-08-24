@@ -15,6 +15,7 @@ import com.campusos.portal.repo.VerificationRepository;
 import com.campusos.portal.service.QrService;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,7 @@ import org.springframework.web.servlet.ModelAndView;
  * A QR is only as good as the URL inside it, so these assert the encoded TARGET — the exact
  * string handed to QrService — not merely that a QR was drawn.
  */
+@Tag("security")
 class VerifyLinkTest extends EngineTestBase {
 
     private static final String ID = "SNIT-2026-TEST01";

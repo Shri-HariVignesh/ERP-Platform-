@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.campusos.portal.domain.DocumentArtifact;
 import com.campusos.portal.engine.EngineTestBase;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * AREA 2 — scoping over HTTP, against the seeded tenants (Hari/SNIT, Meera/ACE).
  * Proves the boundary holds at the edge, not only in the service layer.
  */
+@Tag("security")
 class CrossTenantWebTest extends EngineTestBase {
 
     private static final String HARI = "s_hari";

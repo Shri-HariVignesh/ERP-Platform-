@@ -8,12 +8,14 @@ import com.campusos.portal.engine.EngineTestBase;
 import com.campusos.portal.engine.IllegalTransitionException;
 import com.campusos.portal.service.Scope;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * AREA 2 — scoping. Both halves: a different tenant, and a different student inside the
  * SAME tenant (which is the leak a tenant-only check would miss).
  */
+@Tag("security")
 class ScopingTest extends EngineTestBase {
 
     @Test

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -21,6 +22,7 @@ import org.springframework.util.ClassUtils;
  * registered, not the source text: if someone swaps a repository to JpaRepository, findAll()
  * and findById() reappear on the API and this fails.
  */
+@Tag("security")
 class RepositoryContractTest extends EngineTestBase {
 
     private static final String PKG = "com.campusos.portal.repo";
