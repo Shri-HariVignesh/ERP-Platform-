@@ -77,6 +77,22 @@ public final class DisplayLabels {
             GrievancePayload.Category.HOSTEL, "Hostel",
             GrievancePayload.Category.OTHER, "Other");
 
+    /**
+     * Which desk a grievance category belongs to. This is a DISPLAY MAPPING, not routing:
+     * AUTO_ASSIGN carries no side effects, so nothing in the engine actually dispatches to a
+     * desk. Deriving the name here — rather than reading a stored routedTo — is what stops the
+     * badge and the "Currently with" line disagreeing, and stops a grievance being attributed
+     * to the Class Advisor, who is the matrix actor and never the desk.
+     */
+    private static final Map<GrievancePayload.Category, String> DESKS = Map.of(
+            GrievancePayload.Category.ACADEMIC, "Academic Office",
+            GrievancePayload.Category.EXAM, "Examination Office",
+            GrievancePayload.Category.FEES, "Accounts Office",
+            GrievancePayload.Category.HOSTEL, "Hostel Warden Office",
+            GrievancePayload.Category.OTHER, "Student Services");
+
+    private static final String DEFAULT_DESK = "Student Services";
+
     private static final Map<RequestType, String> TYPES = Map.of(
             RequestType.LEAVE, "Leave",
             RequestType.INTERNSHIP, "Internship",
@@ -209,6 +225,25 @@ public final class DisplayLabels {
     /** Form option label. The submitted value stays the enum constant. */
     public static String leaveType(LeavePayload.LeaveType t) {
         return t == null ? "" : LEAVE_TYPES.getOrDefault(t, sentenceCase(t.name()));
+    }
+
+    /**
+     * The desk a grievance of this category is shown against. An unmapped or missing category
+     * falls back to Student Services rather than to the matrix actor, because "Class Advisor"
+     * on a hostel complaint is worse than a slightly generic desk.
+     */
+    public static String desk(GrievancePayload.Category c) {
+        return c == null ? DEFAULT_DESK : DESKS.getOrDefault(c, DEFAULT_DESK);
+    }
+
+    /**
+     * The matrix labels states generically ("Assigned to desk") because it knows nothing about
+     * which desk any one request went to. When the payload names a handler, say it — so the
+     * badge and the headline can never tell the student two different things.
+     */
+    public static String stateLabel(String matrixLabel, String handledBy) {
+        if (matrixLabel == null || handledBy == null || handledBy.isBlank()) return matrixLabel;
+        return "Assigned to desk".equals(matrixLabel) ? "Assigned to " + handledBy : matrixLabel;
     }
 
     /** Form option label. The submitted value stays the enum constant. */

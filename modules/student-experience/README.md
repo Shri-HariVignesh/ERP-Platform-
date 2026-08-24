@@ -95,6 +95,19 @@ curl -i -X POST 'http://localhost:8080/sim/requests/{id}/advance?event=APPROVE&a
 
 The same buttons appear inside each card's *Audit trail*, labelled as a demo hook.
 
+**Residual risk, accepted and not mitigated.** `actor` is an ordinary request parameter and
+nothing checks that the caller is entitled to it. Any logged-in student can POST
+`actor=FACULTY` (or `HOD`, or `OFFICE`) and approve their own leave, verify their own
+internship, or issue their own transcript — the guard only rejects combinations the *matrix*
+forbids, never the caller. That is privilege escalation, and it is deliberate: real
+authentication and a staff UI are both declared non-goals, so the demo has no other way to
+show a Faculty or HOD move. It is safe **only** because this is a prototype with seeded data
+and no real identities behind it.
+
+The endpoint must not survive contact with real users. Whoever builds the `identity` module
+owns deleting `/sim` — or gating it behind an authenticated role check — in the same change
+that introduces real logins.
+
 ## Scope
 
 Seven student views: Home, My Requests, Leave, Internship, Documents & Certificates, Academic

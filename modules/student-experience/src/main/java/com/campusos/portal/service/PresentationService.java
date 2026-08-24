@@ -73,7 +73,7 @@ public class PresentationService {
                 payload.title(),
                 payload.subtitle(),
                 r.state.name(),
-                spec.labelFor(r.state),
+                DisplayLabels.stateLabel(spec.labelFor(r.state), payload.handledBy()),
                 tone(spec, r.state),
                 headline(spec, r, payload, rows),
                 steps(spec, r, rows),

@@ -6,6 +6,7 @@ import com.campusos.portal.repo.*;
 import com.campusos.portal.service.DemoIdentity;
 import com.campusos.portal.service.RequestService;
 import com.campusos.portal.service.Scope;
+import com.campusos.portal.view.DisplayLabels;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -235,7 +236,7 @@ public class DemoSeeder implements CommandLineRunner {
         p.subject = subject;
         p.description = body;
         p.anonymous = false;
-        p.sys.routedTo = "Hostel Warden Office";
+        p.sys.routedTo = DisplayLabels.desk(category);
         return p;
     }
 }

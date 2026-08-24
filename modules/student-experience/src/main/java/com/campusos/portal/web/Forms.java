@@ -2,6 +2,7 @@ package com.campusos.portal.web;
 
 import com.campusos.portal.domain.DocType;
 import com.campusos.portal.payload.*;
+import com.campusos.portal.view.DisplayLabels;
 import jakarta.validation.constraints.*;
 
 /**
@@ -115,13 +116,10 @@ public final class Forms {
             p.subject = subject;
             p.description = description;
             p.anonymous = anonymous;
-            p.sys.routedTo = switch (category) {
-                case ACADEMIC -> "Department Academic Cell";
-                case HOSTEL -> "Hostel Warden Office";
-                case EXAM -> "Examination Cell";
-                case FEES -> "Accounts Office";
-                case OTHER -> "Student Welfare Office";
-            };
+            // The frozen contract keeps routed_to as a payload field, so it is still written.
+            // It is NOT the display source — DisplayLabels.desk is — but it must agree with it,
+            // so both come from the same map rather than from two copies that drift apart.
+            p.sys.routedTo = DisplayLabels.desk(category);
             return p;
         }
     }

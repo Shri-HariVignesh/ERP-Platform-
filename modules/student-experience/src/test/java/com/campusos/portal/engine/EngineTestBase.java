@@ -149,12 +149,16 @@ public abstract class EngineTestBase {
     }
 
     protected GrievancePayload grievance() {
+        return grievance(GrievancePayload.Category.HOSTEL);
+    }
+
+    protected GrievancePayload grievance(GrievancePayload.Category category) {
         GrievancePayload p = new GrievancePayload();
-        p.category = GrievancePayload.Category.HOSTEL;
+        p.category = category;
         p.subject = "Test grievance";
         p.description = "Something is broken";
         p.anonymous = false;
-        p.sys.routedTo = "Hostel Warden Office";
+        p.sys.routedTo = com.campusos.portal.view.DisplayLabels.desk(category);
         return p;
     }
 

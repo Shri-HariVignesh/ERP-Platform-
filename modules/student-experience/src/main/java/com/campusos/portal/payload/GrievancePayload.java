@@ -1,6 +1,7 @@
 package com.campusos.portal.payload;
 
 import com.campusos.portal.domain.RequestType;
+import com.campusos.portal.view.DisplayLabels;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,16 +26,23 @@ public class GrievancePayload implements RequestPayload {
     @Override public String title() { return subject; }
 
     @Override public String subtitle() {
-        return category.name().charAt(0) + category.name().substring(1).toLowerCase()
-                + (sys.routedTo == null ? "" : " · " + sys.routedTo)
+        return DisplayLabels.category(category) + " · " + DisplayLabels.desk(category)
                 + (anonymous ? " · anonymous" : "");
     }
 
     @Override public List<Artifact> artifacts() { return new ArrayList<>(); }
 
-    /** The routed desk, not the generic matrix actor — "Hostel Warden Office", not "Class Advisor". */
+    /**
+     * The desk, not the generic matrix actor — "Hostel Warden Office", never "Class Advisor".
+     *
+     * Derived from the category at render time rather than read from sys.routedTo. The stored
+     * value is written once at submit and cannot be trusted to match: nothing in the engine
+     * maintains it (AUTO_ASSIGN declares no side effects), and older rows were seeded with a
+     * single desk regardless of category. Deriving keeps the badge, the subtitle and the
+     * "Currently with" line saying the same thing for every grievance, old rows included.
+     */
     @Override public String handledBy() {
-        return sys.routedTo == null || sys.routedTo.isBlank() ? null : sys.routedTo;
+        return DisplayLabels.desk(category);
     }
 
     @Override public void validate() {

@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import com.campusos.portal.service.QrService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,13 +31,23 @@ public class VerifyController {
     private final TenantRepository tenants;
     private final StudentRepository students;
     private final QrService qr;
+    private final String baseUrl;
 
     public VerifyController(VerificationRepository verifications, TenantRepository tenants,
-                            StudentRepository students, QrService qr) {
+                            StudentRepository students, QrService qr,
+                            @Value("${app.base-url}") String baseUrl) {
         this.verifications = verifications;
         this.tenants = tenants;
         this.students = students;
         this.qr = qr;
+        this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/+$", "");
+    }
+
+    /** The absolute URL this record is verifiable at — what the QR encodes, and what a
+     *  verifier who cannot scan types in by hand. Built from the configured origin, never
+     *  from the request, so a spoofed Host header cannot rewrite where the QR points. */
+    private String verifyUrl(String verifyId) {
+        return baseUrl + "/verify/" + verifyId;
     }
 
     @GetMapping("/verify/{verifyId}")
@@ -53,7 +64,9 @@ public class VerifyController {
                     .map(s -> s.name).orElse("—"));
             model.addAttribute("credential", DisplayLabels.credentialKind(v.kind));
             model.addAttribute("issuedOn", ISSUED.format(v.issuedAt));
-            model.addAttribute("qr", qr.svg("http://localhost:8080/verify/" + verifyId, 132));
+            String url = verifyUrl(verifyId);
+            model.addAttribute("verifyUrl", url);
+            model.addAttribute("qr", qr.svg(url, 132));
         }
         return "verify";
     }
