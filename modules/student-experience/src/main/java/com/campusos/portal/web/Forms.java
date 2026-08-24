@@ -9,6 +9,12 @@ import jakarta.validation.constraints.*;
  * Bound form objects. Validation runs here, before a typed payload DTO is ever built,
  * so `payload` is never written from unvalidated input.
  * (JavaBean accessors are required by Spring's th:field binder.)
+ *
+ * SECURITY (CWE-1284/CWE-400): EVERY String field carries an explicit @Size. Several did not,
+ * and a 100,000-character `company` was accepted, persisted and then re-rendered on every
+ * subsequent page load — a 118KB page for one request, repeatable without limit and without a
+ * session. A date field is bounded too: `yyyy-MM-dd` is 10 characters, so nothing longer can
+ * be a date, and the check costs nothing.
  */
 public final class Forms {
 
@@ -16,8 +22,8 @@ public final class Forms {
 
     public static class LeaveForm {
         @NotNull private LeavePayload.LeaveType leaveType = LeavePayload.LeaveType.PERSONAL;
-        @NotBlank private String from;
-        @NotBlank private String to;
+        @NotBlank @Size(max = 10) private String from;
+        @NotBlank @Size(max = 10) private String to;
         @NotBlank @Size(max = 300) private String reason;
 
         public LeavePayload.LeaveType getLeaveType() { return leaveType; }
@@ -40,13 +46,13 @@ public final class Forms {
     }
 
     public static class InternshipForm {
-        @NotBlank private String company;
-        @NotBlank private String role;
-        @NotBlank private String from;
-        @NotBlank private String to;
+        @NotBlank @Size(max = 120) private String company;
+        @NotBlank @Size(max = 120) private String role;
+        @NotBlank @Size(max = 10) private String from;
+        @NotBlank @Size(max = 10) private String to;
         @NotBlank @Size(max = 500) private String details;
         /** Real file storage is a declared non-goal — a reference is recorded, not a file. */
-        @NotBlank private String certificateFilename;
+        @NotBlank @Size(max = 160) private String certificateFilename;
 
         public String getCompany() { return company; }
         public void setCompany(String v) { this.company = v; }

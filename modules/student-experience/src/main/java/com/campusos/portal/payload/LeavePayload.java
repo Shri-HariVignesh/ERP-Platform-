@@ -50,8 +50,9 @@ public class LeavePayload implements RequestPayload {
     @Override public void validate() {
         if (leaveType == null) throw new IllegalArgumentException("leaveType is required");
         if (reason == null || reason.isBlank()) throw new IllegalArgumentException("reason is required");
-        LocalDate a = LocalDate.parse(from), b = LocalDate.parse(to);
+        LocalDate a = RequestPayload.parseDate("from-date", from), b = RequestPayload.parseDate("to-date", to);
         if (b.isBefore(a)) throw new IllegalArgumentException("to-date is before from-date");
         if (a.plusDays(30).isBefore(b)) throw new IllegalArgumentException("leave longer than 30 days");
     }
+
 }

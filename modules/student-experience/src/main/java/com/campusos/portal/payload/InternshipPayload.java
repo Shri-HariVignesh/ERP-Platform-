@@ -65,7 +65,8 @@ public class InternshipPayload implements RequestPayload {
     @Override public void validate() {
         if (company == null || company.isBlank()) throw new IllegalArgumentException("company is required");
         if (role == null || role.isBlank()) throw new IllegalArgumentException("role is required");
-        LocalDate a = LocalDate.parse(from), b = LocalDate.parse(to);
+        LocalDate a = RequestPayload.parseDate("start date", from),
+                  b = RequestPayload.parseDate("end date", to);
         if (!b.isAfter(a)) throw new IllegalArgumentException("end date must be after start date");
         if (b.isAfter(LocalDate.now())) throw new IllegalArgumentException("internship has not ended yet");
     }

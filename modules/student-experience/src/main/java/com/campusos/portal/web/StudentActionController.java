@@ -54,9 +54,19 @@ public class StudentActionController {
         return "redirect:" + SafeRedirect.resolve(back);
     }
 
+    /**
+     * SECURITY (CWE-1284): `input` arrives as a raw request parameter and never passes through
+     * Forms, so no @Size applies to it. It is bounded here to the same limit the internship
+     * form puts on certificateFilename; without this it was the one unbounded write left.
+     */
+    static final int MAX_INPUT = 160;
+
     /** The only per-type code path, and it lives in Java, not in a template. */
     private Consumer<RequestPayload> patchFor(Request r, String input) {
         if (input == null || input.isBlank()) return null;
+        if (input.length() > MAX_INPUT) {
+            throw new IllegalTransitionException("input exceeds " + MAX_INPUT + " characters");
+        }
         return switch (r.type) {
             case INTERNSHIP -> p -> {
                 InternshipPayload ip = (InternshipPayload) p;
