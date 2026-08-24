@@ -1,0 +1,16 @@
+# Build output
+target/
+.next/
+node_modules/
+
+# Local databases and secrets
+*.db
+*.db-journal
+.env
+.env.local
+
+# Editor / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store

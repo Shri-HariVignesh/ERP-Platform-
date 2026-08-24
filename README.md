@@ -1,1 +1,40 @@
-# ERP-Platform-
+# ERP Platform
+
+A modular campus ERP. Each concern is a **module** under `modules/` with its own runtime, its
+own persistence and its own documents; the platform is the set of contracts modules agree on,
+not a single deployable.
+
+## Layout
+
+```
+ERP-Platform-/
+├── docs/                       platform-level contracts
+│   ├── ARCHITECTURE.md         module boundaries, tenancy, the shared rules
+│   └── MODULES.md              the module map — what exists, what is planned
+└── modules/
+    └── student-experience/     first module (built)
+        ├── README.md
+        └── docs/
+            ├── STATE_CONTRACT.md
+            └── REPOSITORY_SCOPE_RULES.md
+```
+
+## Modules
+
+| Module | Status | What it owns |
+|---|---|---|
+| `student-experience` | built | The seven student-facing views: Home, My Requests, Leave, Internship, Documents & Certificates, Academic, Grievance — all on one polymorphic request engine. |
+
+Everything else — staff dashboards, admissions, finance, HR, hostel, library, placements — is
+unclaimed. See [`docs/MODULES.md`](docs/MODULES.md) before starting one.
+
+## Non-negotiables
+
+Two rules hold across every module, not just the first:
+
+1. **Tenancy is not optional.** No query compiles without `tenant_id`. See
+   [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+2. **One guarded transition per state change.** State moves through a declared matrix and nowhere
+   else; side effects fire inside the transition's transaction.
+
+`student-experience` is the reference implementation of both.
