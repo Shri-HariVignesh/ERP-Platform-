@@ -84,7 +84,8 @@ public class RequestStateMachine {
                               Consumer<RequestPayload> patch) {
         Request r = requests.findByIdAndTenantIdAndStudentId(requestId, scope.tenantId(), scope.studentId())
                 .orElseThrow(() -> new IllegalTransitionException(
-                        "request " + requestId + " is not visible in this tenant+student scope"));
+                        "request " + safeForMessage(requestId)
+                                + " is not visible in this tenant+student scope"));
         Request moved = fire(scope, r, event, actor, note, patch);
         return autopilot(scope, moved);
     }
@@ -179,5 +180,23 @@ public class RequestStateMachine {
             r = fire(scope, r, next.event(), Actor.SYSTEM, null, null);
         }
         return r;
+    }
+
+    /**
+     * SECURITY (CWE-117, OWASP A09): requestId is a caller-supplied path variable, and this
+     * message is both thrown and logged. A CRLF in it terminated the log record early and the
+     * remainder became a STANDALONE record — reproduced with
+     * POST /sim/requests/req_x%0d%0a2026-01-01T00:00:00.000+05:30++ERROR+FORGED.../advance,
+     * which produced a genuine-looking forged "admin access granted" entry.
+     *
+     * That matters more here than in most apps: this system's claim is a complete, tamper
+     * evident audit trail, and a caller who can author log records can fabricate history or
+     * bury their own. Control characters are stripped and the value is capped, so an id can
+     * still be correlated but can never author a line.
+     */
+    public static String safeForMessage(String raw) {
+        if (raw == null) return "null";
+        String cleaned = raw.replaceAll("[\\p{Cntrl}]", "");
+        return cleaned.length() > 64 ? cleaned.substring(0, 64) + "..." : cleaned;
     }
 }
