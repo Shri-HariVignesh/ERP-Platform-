@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Academic')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+
+<main class="wrap">
+  <div th:replace="~{fragments/layout :: flash}"></div>
+
+  <section class="hero">
+    <h1>Academic</h1>
+    <p class="sub">Read-only. Everything here is written by workflows, never typed in —
+      the attendance figure moves when leave is approved, the internships arrive from verification.</p>
+  </section>
+
+  <section class="stats big">
+    <div>
+      <span>Attendance</span>
+      <strong th:text="${attendancePct} + '%'">0%</strong>
+      <small th:text="${approvedLeaveDays} + ' day(s) counted as approved leave'">—</small>
+    </div>
+    <div>
+      <span>CGPA</span>
+      <strong th:text="${cgpa}">0</strong>
+      <small th:text="${results.size()} + ' semesters published'">—</small>
+    </div>
+    <div>
+      <span>Hall ticket</span>
+      <strong th:if="${hallTicket != null}">Released</strong>
+      <strong th:if="${hallTicket == null}" class="muted">Not issued</strong>
+      <small th:if="${hallTicket != null}" th:text="${hallTicket.serialNo}">serial</small>
+      <small th:if="${hallTicket == null}">Request it under Documents</small>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Semester results</h2></div>
+    <table class="tbl">
+      <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th></tr></thead>
+      <tbody>
+        <tr th:each="r : ${results}">
+          <td th:text="'Semester ' + ${r.semester}">S</td>
+          <td th:text="${r.sgpa}">0</td>
+          <td th:text="${r.credits}">0</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="head"><h2>Examination</h2></div>
+    <div class="panel flat" th:if="${term != null}">
+      <strong th:text="${term.name}">Term</strong>
+      <p th:text="${term.startDate} + ' → ' + ${term.endDate}">dates</p>
+      <p th:if="${hallTicket != null}">
+        Hall ticket <code th:text="${hallTicket.serialNo}"></code>
+        <a th:href="@{'/documents/' + ${hallTicket.id} + '/download'}">Download</a>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Verified academic record</h2></div>
+    <ul class="record" th:if="${!records.isEmpty()}">
+      <li th:each="r : ${records}">
+        <div>
+          <strong th:text="${r.title}">Title</strong>
+          <p th:text="${r.subtitle}">sub</p>
+        </div>
+        <div class="right">
+          <span th:text="${r.credits} + ' credits'">0</span>
+          <a th:if="${r.verifyId != null}" th:href="@{'/verify/' + ${r.verifyId}}"
+             th:text="${r.verifyId}">id</a>
+        </div>
+      </li>
+    </ul>
+    <p class="empty" th:if="${records.isEmpty()}">Nothing recorded yet. Verified internships land here.</p>
+  </section>
+</main>
+</body>
+</html>

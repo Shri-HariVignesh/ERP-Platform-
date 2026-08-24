@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Leave')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+
+<main class="wrap">
+  <div th:replace="~{fragments/layout :: flash}"></div>
+
+  <section class="hero">
+    <h1>Leave</h1>
+    <p class="sub">Submit once. The system validates dates and your balance, then routes to your
+      advisor and HOD. On approval it writes your attendance itself — nobody retypes anything.</p>
+  </section>
+
+  <form class="panel" th:action="@{/leave}" method="post" th:object="${form}">
+    <h2>Apply for leave</h2>
+    <p class="errs" th:if="${#fields.hasAnyErrors()}">
+      <span th:each="e : ${#fields.allErrors()}" th:text="${e}"></span>
+    </p>
+
+    <div class="grid">
+      <label>Type
+        <select th:field="*{leaveType}">
+          <option th:each="t : ${leaveTypes}" th:value="${t}"
+                  th:text="${T(com.campusos.portal.view.DisplayLabels).leaveType(t)}"></option>
+        </select>
+      </label>
+      <label>From <input type="date" th:field="*{from}" required></label>
+      <label>To <input type="date" th:field="*{to}" required></label>
+    </div>
+    <label>Reason <input type="text" th:field="*{reason}" required placeholder="Why do you need this leave?"></label>
+
+    <p class="hint">Two decisions: the dates, and the reason. Duration, leave balance and attendance
+      impact are computed for you.</p>
+    <button class="btn action" type="submit">Submit leave request</button>
+  </form>
+
+  <div class="cards">
+    <th:block th:each="c : ${cards}">
+        <div th:replace="~{fragments/card :: card(${c}, '/leave')}"></div>
+      </th:block>
+  </div>
+  <p class="empty" th:if="${cards.isEmpty()}">No leave requests yet.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verification · CampusOS</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="plain">
+<main class="wrap narrow">
+
+  <div class="verify ok" th:if="${v != null}">
+    <span class="kind">Verified record</span>
+    <h1 th:text="${v.subject}">Subject</h1>
+    <p class="sub" th:with="d=${T(com.campusos.portal.view.DisplayLabels).publicDetail(v.detail)}"
+       th:if="${d != null and !d.isBlank()}" th:text="${d}">detail</p>
+    <dl>
+      <div><dt>Holder</dt><dd th:text="${holder}">Name</dd></div>
+      <div><dt>Issued by</dt><dd th:text="${tenant.name}">Institute</dd></div>
+      <div><dt>Credential</dt><dd th:text="${credential}">Kind</dd></div>
+      <div><dt>Verification ID</dt><dd><code th:text="${v.verifyId}">id</code></dd></div>
+      <div><dt>Issued on</dt><dd th:text="${issuedOn}">date</dd></div>
+      <div><dt>Status</dt><dd class="ok-status">Verified by the issuing institution</dd></div>
+    </dl>
+    <div class="qr" th:utext="${qr}"></div>
+    <p class="fineprint">This page is the QR target. It is not one of the seven student views —
+      it is what an employer sees after scanning a certificate.</p>
+  </div>
+
+  <div class="verify bad" th:if="${v == null}">
+    <h1>No such record</h1>
+    <p th:text="'Nothing is registered against ' + ${verifyId} + '.'">unknown</p>
+  </div>
+
+  <a class="btn ghost" th:href="@{/}">← Back to the portal</a>
+</main>
+</body>
+</html>

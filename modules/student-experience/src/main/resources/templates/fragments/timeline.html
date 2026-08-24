@@ -1,0 +1,15 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- THE shared timeline visualizer. Renders any workflow from RequestCard.steps alone. -->
+<ol th:fragment="timeline(steps)" class="timeline">
+  <li th:each="s : ${steps}" th:class="'st ' + ${s.status}">
+    <span class="dot"></span>
+    <span class="lbl" th:text="${s.label}">Step</span>
+    <span class="tag" th:if="${s.status == 'skipped'}">skipped by automation</span>
+  </li>
+</ol>
+
+</body>
+</html>

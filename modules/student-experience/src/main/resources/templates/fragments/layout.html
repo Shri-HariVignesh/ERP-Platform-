@@ -1,0 +1,48 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="'CampusOS · ' + ${title}">CampusOS</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<header th:fragment="header" class="topbar">
+  <div class="wrap bar">
+    <a class="brand" th:href="@{/}">
+      <span class="mark" th:text="${tenant.shortName}">SNIT</span>
+      <span>
+        <strong th:text="${tenant.name}">Institute</strong>
+        <small th:text="${tenant.city}">City</small>
+      </span>
+    </a>
+
+    <form class="switcher" th:action="@{/switch}" method="post">
+      <label for="sw">Signed in as</label>
+      <select id="sw" name="studentId" onchange="this.form.submit()">
+        <option th:each="i : ${identities}" th:value="${i.studentId}"
+                th:text="${i.label}" th:selected="${i.studentId == student.id}"></option>
+      </select>
+    </form>
+  </div>
+
+  <nav class="wrap tabs">
+    <a th:href="@{/}"           th:classappend="${nav=='home'}       ? 'on'">Home</a>
+    <a th:href="@{/requests}"   th:classappend="${nav=='requests'}   ? 'on'">My Requests</a>
+    <a th:href="@{/leave}"      th:classappend="${nav=='leave'}      ? 'on'">Leave</a>
+    <a th:href="@{/internship}" th:classappend="${nav=='internship'} ? 'on'">Internship</a>
+    <a th:href="@{/documents}"  th:classappend="${nav=='documents'}  ? 'on'">Documents</a>
+    <a th:href="@{/academic}"   th:classappend="${nav=='academic'}   ? 'on'">Academic</a>
+    <a th:href="@{/grievance}"  th:classappend="${nav=='grievance'}  ? 'on'">Grievance</a>
+  </nav>
+</header>
+
+<div th:fragment="flash">
+  <p class="flash ok"   th:if="${flash}" th:text="${flash}"></p>
+  <p class="flash bad"  th:if="${error}" th:text="${error}"></p>
+</div>
+
+</body>
+</html>

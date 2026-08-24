@@ -12,11 +12,33 @@ ERP-Platform-/
 │   ├── ARCHITECTURE.md         module boundaries, tenancy, the shared rules
 │   └── MODULES.md              the module map — what exists, what is planned
 └── modules/
-    └── student-experience/     first module (built)
+    └── student-experience/     first module (built) — Spring Boot, Maven root
         ├── README.md
-        └── docs/
-            ├── STATE_CONTRACT.md
-            └── REPOSITORY_SCOPE_RULES.md
+        ├── pom.xml
+        ├── docs/
+        │   ├── STATE_CONTRACT.md
+        │   └── REPOSITORY_SCOPE_RULES.md
+        └── src/
+            ├── main/java/com/campusos/portal/
+            │   ├── engine/     the guarded state machine + transition matrix
+            │   ├── domain/     one Request table, typed enums
+            │   ├── payload/    per-type payload DTOs + codec
+            │   ├── repo/       scoped repositories (no JpaRepository)
+            │   ├── service/    scope resolution, academic writes, QR
+            │   ├── view/       the normalized card / timeline read model
+            │   ├── web/        controllers incl. the demo hook and /verify
+            │   └── config/     demo seeder, security headers
+            ├── main/resources/ Thymeleaf templates + css
+            └── test/java/      74 tests: guards, side effects, scoping, security
+```
+
+## Build
+
+Each module builds independently; there is no aggregator POM yet.
+
+```bash
+cd modules/student-experience && mvn spring-boot:run   # http://localhost:8080
+cd modules/student-experience && mvn test              # 74 tests
 ```
 
 ## Modules

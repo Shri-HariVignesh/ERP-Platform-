@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Grievance')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+
+<main class="wrap">
+  <div th:replace="~{fragments/layout :: flash}"></div>
+
+  <section class="hero">
+    <h1>Grievance</h1>
+    <p class="sub">Routed to the right desk by category the moment you submit — no register,
+      no asking around for whose problem it is.</p>
+  </section>
+
+  <form class="panel" th:action="@{/grievance}" method="post" th:object="${form}">
+    <h2>Raise a grievance</h2>
+    <p class="errs" th:if="${#fields.hasAnyErrors()}">
+      <span th:each="e : ${#fields.allErrors()}" th:text="${e}"></span>
+    </p>
+
+    <div class="grid">
+      <label>Category
+        <select th:field="*{category}">
+          <option th:each="cat : ${categories}" th:value="${cat}"
+                  th:text="${T(com.campusos.portal.view.DisplayLabels).category(cat)}"></option>
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" th:field="*{anonymous}"> Submit anonymously
+      </label>
+    </div>
+    <label>Subject <input type="text" th:field="*{subject}" required></label>
+    <label>What happened <textarea th:field="*{description}" rows="4" required></textarea></label>
+    <button class="btn action" type="submit">Submit grievance</button>
+  </form>
+
+  <div class="cards">
+    <th:block th:each="c : ${cards}">
+        <div th:replace="~{fragments/card :: card(${c}, '/grievance')}"></div>
+      </th:block>
+  </div>
+  <p class="empty" th:if="${cards.isEmpty()}">No grievances raised.</p>
+</main>
+</body>
+</html>
