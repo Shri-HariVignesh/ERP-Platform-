@@ -48,6 +48,30 @@
   </section>
 
   <section>
+    <div class="head"><h2>Subject marks</h2></div>
+    <!--
+      Finalized marks only. The filter is in AcademicService.publishedMarks(), not in this
+      template — a draft must not become visible because someone forgot a condition in HTML.
+    -->
+    <table class="tbl" th:if="${!marks.isEmpty()}">
+      <thead><tr><th>Sem</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Credits</th></tr></thead>
+      <tbody>
+        <tr th:each="m : ${marks}">
+          <td th:text="${m.semester()}">0</td>
+          <td th:text="${m.subjectCode()} + ' · ' + ${m.subjectName()}">subject</td>
+          <td th:text="${m.internal()}">0</td>
+          <td th:text="${m.external()}">0</td>
+          <td th:text="${m.total()}">0</td>
+          <td th:text="${m.grade()}">A</td>
+          <td th:text="${m.credits()}">0</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="empty" th:if="${marks.isEmpty()}">
+      No subject marks published yet. Marks appear here once your faculty finalizes them.</p>
+  </section>
+
+  <section>
     <div class="head"><h2>Examination</h2></div>
     <div class="panel flat" th:if="${term != null}">
       <strong th:text="${term.name}">Term</strong>

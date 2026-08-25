@@ -6,12 +6,16 @@ import com.campusos.portal.repo.*;
 import com.campusos.portal.service.DemoIdentity;
 import com.campusos.portal.service.RequestService;
 import com.campusos.portal.service.Scope;
+import com.campusos.portal.service.SgpaMath;
 import com.campusos.portal.view.DisplayLabels;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +33,16 @@ public class DemoSeeder implements CommandLineRunner {
     private final ExamTermRepository terms;
     private final RequestService requests;
     private final DemoIdentity identities;
+    private final StaffUserRepository staff;
+    private final TeachingAssignmentRepository assignments;
+    private final SubjectMarkRepository marks;
+    private final PasswordEncoder encoder;
 
     public DemoSeeder(TenantRepository tenants, StudentRepository students,
                       AttendanceRepository attendance, SemesterResultRepository results,
-                      ExamTermRepository terms, RequestService requests, DemoIdentity identities) {
+                      ExamTermRepository terms, RequestService requests, DemoIdentity identities,
+                      StaffUserRepository staff, TeachingAssignmentRepository assignments,
+                      SubjectMarkRepository marks, PasswordEncoder encoder) {
         this.tenants = tenants;
         this.students = students;
         this.attendance = attendance;
@@ -40,7 +50,17 @@ public class DemoSeeder implements CommandLineRunner {
         this.terms = terms;
         this.requests = requests;
         this.identities = identities;
+        this.staff = staff;
+        this.assignments = assignments;
+        this.marks = marks;
+        this.encoder = encoder;
     }
+
+    /** Demo password for every seeded staff account. Stored only as a BCrypt hash. */
+    private static final String DEMO_PASSWORD = "campus123";
+
+    private static final String CSE = "Computer Science & Engineering";
+    private static final String ECE = "Electronics & Communication";
 
     @Override
     @Transactional
@@ -54,9 +74,34 @@ public class DemoSeeder implements CommandLineRunner {
         identities.register(snit.id, hari.id, "Hari Prasad · SNIT (CSE, Sem 5)");
 
         List<LocalDate> classDays = seedAttendance(snit.id, hari.id);
-        seedResults(snit.id, hari.id);
+        seedMarksAndResults(snit.id, hari.id, "CS", 5);
         seedTerm(snit.id);
         seedRequests(new Scope(snit.id, hari.id), classDays);
+
+        /* ---- a classmate, so a class register has more than one row ---- */
+        Student divya = student("s_divya", snit.id, "SNIT21CS051", "Divya Rajan",
+                "divya.rajan@snit.ac.in", "B.Tech Computer Science", CSE,
+                5, "A", 0, "Prof. Anjali Menon", "Dr. R. Krishnakumar");
+        identities.register(snit.id, divya.id, "Divya Rajan · SNIT (CSE, Sem 5) — classmate");
+        List<LocalDate> divyaDays = seedAttendance(snit.id, divya.id);
+        seedMarksAndResults(snit.id, divya.id, "CS", 5);
+        requests.create(new Scope(snit.id, divya.id), RequestType.LEAVE,
+                leave(LeavePayload.LeaveType.MEDICAL, divyaDays.get(3), divyaDays.get(4),
+                        "Dengue — hospital advice attached"));
+
+        /* ---- ANOTHER DEPARTMENT IN THE SAME TENANT. This is the one that proves a faculty
+               member's scope is their own classes, not the whole institution. ---- */
+        Student nikhil = student("s_nikhil", snit.id, "SNIT21EC017", "Nikhil Varma",
+                "nikhil.varma@snit.ac.in", "B.Tech Electronics", ECE,
+                5, "A", 0, "Prof. Suresh Babu", "Dr. Geetha Menon");
+        identities.register(snit.id, nikhil.id, "Nikhil Varma · SNIT (ECE, Sem 5) — other department");
+        List<LocalDate> nikhilDays = seedAttendance(snit.id, nikhil.id);
+        seedMarksAndResults(snit.id, nikhil.id, "EC", 5);
+        requests.create(new Scope(snit.id, nikhil.id), RequestType.LEAVE,
+                leave(LeavePayload.LeaveType.PERSONAL, nikhilDays.get(5), nikhilDays.get(6),
+                        "Cousin's wedding in Alappuzha"));
+
+        seedSnitStaff(snit.id);
 
         /* ---- a second tenant, purely to prove isolation ---- */
         Tenant ace = tenants.save(new Tenant("t_ace",
@@ -66,8 +111,9 @@ public class DemoSeeder implements CommandLineRunner {
                 3, "B", 0, "Prof. S. Ravi", "Dr. Latha Iyer");
         identities.register(ace.id, meera.id, "Meera Nair · ACE (ECE, Sem 3) — isolation check");
         List<LocalDate> aceDays = seedAttendance(ace.id, meera.id);
-        seedResults(ace.id, meera.id);
+        seedMarksAndResults(ace.id, meera.id, "EC", 3);
         seedTerm(ace.id);
+        seedAceStaff(ace.id);
         Scope aceScope = new Scope(ace.id, meera.id);
         requests.create(aceScope, RequestType.DOCUMENT, doc(DocType.BONAFIDE, "Passport application", 1));
         requests.create(aceScope, RequestType.LEAVE,
@@ -117,11 +163,90 @@ public class DemoSeeder implements CommandLineRunner {
         return future;
     }
 
-    private void seedResults(String tenantId, String studentId) {
-        results.save(new SemesterResult(tenantId, studentId, 1, 8.12, 22));
-        results.save(new SemesterResult(tenantId, studentId, 2, 8.46, 24));
-        results.save(new SemesterResult(tenantId, studentId, 3, 8.91, 23));
-        results.save(new SemesterResult(tenantId, studentId, 4, 9.04, 25));
+    private record Subj(String code, String name, int credits) {}
+
+    private static final String[] SUBJECT_NAMES = {
+            "Mathematics", "Data Structures", "Digital Systems", "Signals & Systems",
+            "Professional Communication"};
+
+    private List<Subj> subjectsFor(String prefix, int semester) {
+        List<Subj> out = new ArrayList<>();
+        for (int i = 0; i < SUBJECT_NAMES.length; i++) {
+            out.add(new Subj(prefix + semester + "0" + (i + 1),
+                    SUBJECT_NAMES[i] + " " + toRoman(semester), i == 4 ? 2 : 4));
+        }
+        return out;
+    }
+
+    private static String toRoman(int n) {
+        return switch (n) {
+            case 1 -> "I"; case 2 -> "II"; case 3 -> "III"; case 4 -> "IV";
+            case 5 -> "V"; case 6 -> "VI"; case 7 -> "VII"; default -> String.valueOf(n);
+        };
+    }
+
+    /**
+     * CONSISTENCY BY CONSTRUCTION. The published SemesterResult is not a hand-typed SGPA — it
+     * is DERIVED from the seeded SubjectMark rows through SgpaMath, the very same function
+     * AcademicWriteService uses when a faculty member finalizes marks.
+     *
+     * That matters: a hard-coded SGPA with no marks behind it would be recomputed from partial
+     * data the first time anyone finalized a single subject, silently overwriting it. Here the
+     * marks ARE the source, so a recompute reproduces the same number.
+     *
+     * Only COMPLETED semesters are seeded. The current semester is left empty on purpose, so
+     * the draft -> finalized path can be demonstrated end to end.
+     */
+    private void seedMarksAndResults(String tenantId, String studentId, String prefix,
+                                     int currentSemester) {
+        for (int sem = 1; sem < currentSemester; sem++) {
+            List<SubjectMark> published = new ArrayList<>();
+            for (Subj sub : subjectsFor(prefix, sem)) {
+                SubjectMark m = new SubjectMark();
+                m.tenantId = tenantId;
+                m.studentId = studentId;
+                m.semester = sem;
+                m.subjectCode = sub.code();
+                m.subjectName = sub.name();
+                m.credits = sub.credits();
+                // Deterministic, so a rebuild produces the same transcript every time.
+                int spread = Math.floorMod((studentId + sub.code()).hashCode(), 26);
+                m.internal = 28 + (spread % 11);          // 28..38 of 40
+                m.external = 38 + (spread % 19);          // 38..56 of 60
+                m.status = MarkStatus.FINALIZED;
+                m.enteredByStaffId = "seed";
+                published.add(marks.save(m));
+            }
+            results.save(new SemesterResult(tenantId, studentId, sem,
+                    SgpaMath.sgpa(published), SgpaMath.credits(published)));
+        }
+    }
+
+    /* --------------------------------- staff --------------------------------- */
+
+    private StaffUser staff(String id, String tenantId, String username, String name, String email,
+                            String department, StaffRole... roles) {
+        StaffUser u = new StaffUser();
+        u.id = id;
+        u.tenantId = tenantId;
+        u.username = username;
+        u.passwordHash = encoder.encode(DEMO_PASSWORD);
+        u.name = name;
+        u.email = email;
+        u.department = department;
+        u.active = true;
+        u.roles = new java.util.LinkedHashSet<>(Arrays.asList(roles));
+        return staff.save(u);
+    }
+
+    /** Gives one staff member every subject of one class, so a class has a real timetable. */
+    private void teaches(String tenantId, String staffId, String department, int semester,
+                         String section, String prefix, Set<String> only) {
+        for (Subj sub : subjectsFor(prefix, semester)) {
+            if (only != null && !only.contains(sub.code())) continue;
+            assignments.save(new TeachingAssignment(tenantId, staffId, department, semester,
+                    section, sub.code(), sub.name(), sub.credits()));
+        }
     }
 
     private void seedTerm(String tenantId) {
@@ -197,6 +322,50 @@ public class DemoSeeder implements CommandLineRunner {
                 "No hot water in Block C for six days",
                 "The heater on the second floor of Block C has been down since last Tuesday. "
                         + "Two complaints in the register have gone unanswered."));
+    }
+
+    /**
+     * SNIT staff. Between them they cover every Actor of the frozen matrix, plus the two cases
+     * the scope rules exist for: a faculty member in a DIFFERENT department, and a staff member
+     * holding TWO roles at once.
+     */
+    private void seedSnitStaff(String tenantId) {
+        // FACULTY of CSE Sem 5 A — Hari's and Divya's class advisor.
+        StaffUser anjali = staff("st_anjali", tenantId, "anjali.menon", "Prof. Anjali Menon",
+                "anjali.menon@snit.ac.in", CSE, StaffRole.FACULTY);
+        teaches(tenantId, anjali.id, CSE, 5, "A", "CS", Set.of("CS501", "CS502", "CS503"));
+
+        // A SECOND faculty on the same class, so "every subject finalized" is a real gate and
+        // not something one person can trivially satisfy alone.
+        StaffUser suresh = staff("st_suresh", tenantId, "suresh.kumar", "Prof. Suresh Kumar",
+                "suresh.kumar@snit.ac.in", CSE, StaffRole.FACULTY);
+        teaches(tenantId, suresh.id, CSE, 5, "A", "CS", Set.of("CS504", "CS505"));
+
+        // HOD of CSE who ALSO teaches — two roles, two breadths, one login.
+        StaffUser krishna = staff("st_krishna", tenantId, "krishnakumar", "Dr. R. Krishnakumar",
+                "hod.cse@snit.ac.in", CSE, StaffRole.HOD, StaffRole.FACULTY);
+        teaches(tenantId, krishna.id, CSE, 5, "A", "CS", Set.of("CS503"));
+
+        // FACULTY of ECE — same tenant, different department. Must never see Hari.
+        StaffUser babu = staff("st_babu", tenantId, "suresh.babu", "Prof. Suresh Babu",
+                "suresh.babu@snit.ac.in", ECE, StaffRole.FACULTY);
+        teaches(tenantId, babu.id, ECE, 5, "A", "EC", Set.of("EC501", "EC502"));
+
+        // Tenant-wide desks: no department, no teaching assignment, therefore no academic
+        // authoring rights at all — only the requests their Actor is the decision-maker for.
+        staff("st_registrar", tenantId, "registrar.snit", "Dr. Latha Pillai (Registrar)",
+                "registrar@snit.ac.in", null, StaffRole.INSTITUTION);
+        staff("st_exam", tenantId, "exam.office", "Examination Office",
+                "exams@snit.ac.in", null, StaffRole.OFFICE);
+    }
+
+    /** ACE staff, so cross-tenant isolation has a real staff member on the other side. */
+    private void seedAceStaff(String tenantId) {
+        StaffUser latha = staff("st_latha", tenantId, "latha.iyer", "Dr. Latha Iyer",
+                "hod.ece@ace.ac.in", ECE, StaffRole.HOD, StaffRole.FACULTY);
+        teaches(tenantId, latha.id, ECE, 3, "B", "EC", null);
+        staff("st_ace_office", tenantId, "office.ace", "ACE Examination Office",
+                "exams@ace.ac.in", null, StaffRole.OFFICE, StaffRole.INSTITUTION);
     }
 
     /* ------------------------------- payloads ------------------------------- */

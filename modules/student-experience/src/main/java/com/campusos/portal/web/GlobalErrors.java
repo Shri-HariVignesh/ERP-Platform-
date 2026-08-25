@@ -1,6 +1,7 @@
 package com.campusos.portal.web;
 
 import com.campusos.portal.engine.IllegalTransitionException;
+import com.campusos.portal.service.StaffAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -32,5 +33,18 @@ public class GlobalErrors {
     public String illegal(IllegalTransitionException e) {
         log.warn("IllegalTransitionException: {}", e.getMessage());
         return "That request is not available.";
+    }
+
+    /**
+     * A staff member reached outside their scope. 403, and the body says only that — it never
+     * reveals whether the thing they asked for exists, which would turn the id into an oracle
+     * for another department's or another tenant's data.
+     */
+    @ExceptionHandler(StaffAccessException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public String denied(StaffAccessException e) {
+        log.warn("StaffAccessException: {}", e.getMessage());
+        return "Not available in your scope.";
     }
 }

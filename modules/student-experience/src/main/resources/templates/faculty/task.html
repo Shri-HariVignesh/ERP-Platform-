@@ -1,0 +1,39 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  THE STAFF INBOX ROW. It embeds the SAME fragments/card the student sees — same timeline,
+  same trail, same DisplayLabels — and adds only two things: who it is about, and the actions
+  THIS principal may take.
+
+  Look at what the action form posts: an event, a note, a redirect target. No actor. There is
+  no field for one, because the server derives it from the session and the frozen matrix.
+-->
+<article th:fragment="task(t, back)" class="task">
+
+  <div class="who-for">
+    <a th:href="@{'/faculty/students/' + ${t.studentId()}}" th:text="${t.studentName()}">Student</a>
+    <span th:text="${t.rollNo()} + ' · ' + ${t.className()}">meta</span>
+  </div>
+
+  <div th:replace="~{fragments/card :: card(${t.card()}, ${back})}"></div>
+
+  <div class="staff-actions" th:if="${t.actionable()}">
+    <form th:each="a : ${t.actions()}" class="act"
+          th:action="@{'/faculty/requests/' + ${t.card().id()} + '/act'}" method="post">
+      <input type="hidden" name="event" th:value="${a.event()}">
+      <input type="hidden" name="back" th:value="${back}">
+      <textarea th:if="${a.requiresNote()}" name="note" required
+                placeholder="Reason (required — the student reads this)"></textarea>
+      <button type="submit" th:class="'btn ' + ${a.tone()}" th:text="${a.label()}">Act</button>
+    </form>
+  </div>
+
+  <p class="empty small" th:unless="${t.actionable()}">
+    Waiting on another desk — nothing for you to do here.</p>
+
+</article>
+
+</body>
+</html>

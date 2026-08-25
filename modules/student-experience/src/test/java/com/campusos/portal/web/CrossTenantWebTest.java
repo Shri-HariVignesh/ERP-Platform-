@@ -1,6 +1,8 @@
 package com.campusos.portal.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -24,7 +26,7 @@ class CrossTenantWebTest extends EngineTestBase {
 
     private MockHttpSession sessionFor(String studentId) throws Exception {
         MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").param("studentId", studentId).session(session))
+        mvc.perform(post("/switch").with(csrf()).param("studentId", studentId).session(session))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .status().is3xxRedirection());
         return session;
@@ -120,20 +122,50 @@ class CrossTenantWebTest extends EngineTestBase {
                 .doesNotContain("Hari Prasad");
     }
 
+    /**
+     * REPOINTED FROM /sim. This used to prove the demo hook could not move another tenant's
+     * request. /sim is retired, so the same property is now asserted against the live staff
+     * surface — and it is a stronger claim: the ACE staff member here is genuinely
+     * authenticated and genuinely holds the OFFICE role. She is refused because the request
+     * belongs to another tenant, not because she failed to log in.
+     */
     @Test
-    @DisplayName("the demo hook cannot move another tenant's request")
-    void crossTenantSimAdvanceIsRefused() throws Exception {
+    @DisplayName("an authenticated staff member cannot move another tenant's request")
+    void crossTenantStaffActionIsRefused() throws Exception {
         var his = requests.findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI).stream()
                 .filter(r -> r.state == com.campusos.portal.domain.RequestState.APPROVAL)
                 .findFirst().orElseThrow();
         var stateBefore = his.state;
 
-        MockHttpSession meera = sessionFor(MEERA);
-        mvc.perform(post("/sim/requests/" + his.id + "/advance")
-                        .param("event", "APPROVE").param("actor", "OFFICE").session(meera))
-                .andReturn();
+        int status = mvc.perform(post("/faculty/requests/" + his.id + "/act").with(csrf())
+                        .with(user(principal("office.ace")))
+                        .param("event", "APPROVE"))
+                .andReturn().getResponse().getStatus();
 
+        assertThat(status).as("refused, not quietly redirected").isEqualTo(403);
         assertThat(requests.findByIdAndTenantIdAndStudentId(his.id, "t_snit", HARI).orElseThrow().state)
                 .as("her attempt changed nothing").isEqualTo(stateBefore);
+    }
+
+    /** ADDED per the freeze conditions: the same endpoint, with no session at all. */
+    @Test
+    @DisplayName("the staff action endpoint refuses an anonymous caller outright")
+    void anonymousStaffActionIsRefused() throws Exception {
+        var his = requests.findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI).stream()
+                .filter(r -> r.state == com.campusos.portal.domain.RequestState.APPROVAL)
+                .findFirst().orElseThrow();
+        var stateBefore = his.state;
+
+        var res = mvc.perform(post("/faculty/requests/" + his.id + "/act").with(csrf())
+                .param("event", "APPROVE")).andReturn().getResponse();
+
+        assertThat(res.getStatus())
+                .as("anonymous must be bounced to the login form, never served")
+                .isIn(302, 401, 403);
+        if (res.getStatus() == 302) {
+            assertThat(res.getHeader("Location")).contains("/login");
+        }
+        assertThat(requests.findByIdAndTenantIdAndStudentId(his.id, "t_snit", HARI).orElseThrow().state)
+                .as("an anonymous POST changed nothing").isEqualTo(stateBefore);
     }
 }

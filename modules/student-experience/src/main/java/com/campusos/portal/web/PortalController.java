@@ -216,6 +216,8 @@ public class PortalController {
         Scope s = base(model, session, "academic");
         model.addAttribute("results", academic.results(s));
         model.addAttribute("cgpa", academic.cgpa(s));
+        // Finalized subject marks only — this is where faculty authoring becomes visible.
+        model.addAttribute("marks", academic.publishedMarks(s));
         model.addAttribute("records", academic.records(s));
         model.addAttribute("approvedLeaveDays", academic.approvedLeaveDays(s));
         model.addAttribute("term", academic.currentTerm(s.tenantId()));

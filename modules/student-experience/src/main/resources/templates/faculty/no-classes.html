@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{faculty/layout :: head('Not assigned')}"></head>
+<body>
+<header th:replace="~{faculty/layout :: header}"></header>
+<main class="wrap">
+  <section class="hero">
+    <h1>No teaching assignment</h1>
+    <p class="sub">Attendance and marks are authorized by a teaching assignment, not by a role.
+      You hold no assignment, so there is no class whose register or marks you may author.
+      Requests waiting on your role are still in My Tasks.</p>
+  </section>
+  <p><a class="btn ghost" th:href="@{/faculty/tasks}">Go to My Tasks</a></p>
+</main>
+</body>
+</html>

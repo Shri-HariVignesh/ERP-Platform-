@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusOS · Staff sign in</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="loginpage">
+<main class="loginbox">
+  <h1>CampusOS</h1>
+  <p class="sub">Staff sign in</p>
+
+  <p class="flash bad" th:if="${error}" th:text="${error}"></p>
+  <p class="flash ok"  th:if="${flash}" th:text="${flash}"></p>
+
+  <form th:action="@{/login}" method="post">
+    <label for="u">Username</label>
+    <input id="u" name="username" type="text" autocomplete="username" required autofocus>
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+    <button class="btn success" type="submit">Sign in</button>
+  </form>
+
+  <details class="trail demo">
+    <summary>Demo accounts</summary>
+    <ul class="hist">
+      <li><span class="step">anjali.menon</span><span class="who">Faculty · CSE Sem 5 A</span></li>
+      <li><span class="step">suresh.kumar</span><span class="who">Faculty · CSE Sem 5 A (other subjects)</span></li>
+      <li><span class="step">krishnakumar</span><span class="who">HOD + Faculty · CSE</span></li>
+      <li><span class="step">suresh.babu</span><span class="who">Faculty · ECE (other department)</span></li>
+      <li><span class="step">registrar.snit</span><span class="who">Institution</span></li>
+      <li><span class="step">exam.office</span><span class="who">Examination Office</span></li>
+      <li><span class="step">latha.iyer</span><span class="who">HOD + Faculty · ACE (other tenant)</span></li>
+    </ul>
+    <p class="fineprint">Password for all demo accounts: <code>campus123</code></p>
+  </details>
+
+  <p class="fineprint"><a th:href="@{/}">← Student portal</a></p>
+</main>
+</body>
+</html>
