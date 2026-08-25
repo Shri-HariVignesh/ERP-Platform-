@@ -60,11 +60,19 @@ section "3/3  Live probes"
 mvn -B spring-boot:run -Dspring-boot.run.arguments="--server.port=${PORT}" > "$LOG" 2>&1 &
 APP_PID=$!
 
+# READINESS, TWICE. The port answering is not the same as the app being ready, and since
+# student authentication landed it is not even close: / now redirects to /login the instant
+# the security filter is active, which is BEFORE DemoSeeder runs — it is a CommandLineRunner,
+# and Boot runs those after the web server is already accepting connections.
+#
+# The old probe polled / and took its 302 as "up". Every student probe then ran against an
+# unseeded database and failed, which is how this was found: the readiness check had started
+# failing OPEN. So wait for the login form first, then wait for a login to actually work.
 for _ in $(seq 1 120); do
-  curl -sf -o /dev/null "${BASE}/" && break
+  curl -sf -o /dev/null "${BASE}/login" && break
   sleep 1
 done
-if ! curl -sf -o /dev/null "${BASE}/"; then
+if ! curl -sf -o /dev/null "${BASE}/login"; then
   red "  FAIL  app did not start on port ${PORT}"; tail -40 "$LOG"; exit 1
 fi
 
@@ -91,7 +99,13 @@ login() { # jar username
     -d "_csrf=$(csrf "$1" /login)&username=$2&password=campus123"
 }
 
-login "$JAR_HARI"  snit21cs042
+# The seeder may still be running. Retry the login until it takes, then assert it — a bounded
+# wait for real data, not a sleep and a hope.
+for _ in $(seq 1 60); do
+  login "$JAR_HARI" snit21cs042
+  curl -s -b "$JAR_HARI" "${BASE}/home" | grep -q '<h1>Hello, Hari' && break
+  sleep 1
+done
 login "$JAR_MEERA" ace22ec118
 
 check "student login actually took effect (hari)" \
