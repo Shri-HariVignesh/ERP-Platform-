@@ -2,13 +2,13 @@ package com.campusos.portal.web;
 
 import com.campusos.portal.engine.IllegalTransitionException;
 import com.campusos.portal.service.StaffAccessException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.ModelAndView;
 
 @ControllerAdvice
 public class GlobalErrors {
@@ -28,11 +28,9 @@ public class GlobalErrors {
      * still hold — this narrows what crosses the HTTP boundary, nothing else.
      */
     @ExceptionHandler(IllegalTransitionException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public String illegal(IllegalTransitionException e) {
+    public ModelAndView illegal(IllegalTransitionException e, HttpServletRequest req) {
         log.warn("IllegalTransitionException: {}", e.getMessage());
-        return "That request is not available.";
+        return errorView(HttpStatus.BAD_REQUEST, "That request is not available.", req);
     }
 
     /**
@@ -41,10 +39,19 @@ public class GlobalErrors {
      * for another department's or another tenant's data.
      */
     @ExceptionHandler(StaffAccessException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    @ResponseBody
-    public String denied(StaffAccessException e) {
+    public ModelAndView denied(StaffAccessException e, HttpServletRequest req) {
         log.warn("StaffAccessException: {}", e.getMessage());
-        return "Not available in your scope.";
+        return errorView(HttpStatus.FORBIDDEN, "Not available in your scope.", req);
+    }
+
+    /** Same branded page GlobalErrors uses, so a scope or transition refusal never dumps a bare string. */
+    private ModelAndView errorView(HttpStatus status, String message, HttpServletRequest req) {
+        ModelAndView mv = new ModelAndView("error");
+        mv.setStatus(status);
+        mv.addObject("status", status.value());
+        mv.addObject("error", status.getReasonPhrase());
+        mv.addObject("message", message);
+        mv.addObject("path", req.getRequestURI());
+        return mv;
     }
 }

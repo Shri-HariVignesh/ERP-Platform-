@@ -21,10 +21,11 @@
 
     <form class="switcher" th:action="@{/switch}" method="post">
       <label for="sw">Signed in as</label>
-      <select id="sw" name="studentId" onchange="this.form.submit()">
+      <select id="sw" name="studentId">
         <option th:each="i : ${identities}" th:value="${i.studentId}"
                 th:text="${i.label}" th:selected="${i.studentId == student.id}"></option>
       </select>
+      <button class="btn ghost" type="submit">Switch</button>
     </form>
   </div>
 

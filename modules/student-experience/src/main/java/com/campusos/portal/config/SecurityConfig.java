@@ -64,7 +64,9 @@ public class SecurityConfig {
                     .failureUrl("/login?error")
                     .permitAll())
             .logout(out -> out
-                    .logoutUrl("/logout")
+                    // SECURITY: logout is POST-only (explicit, not just logoutUrl's default),
+                    // so a GET to /logout can never be ridden in via CSRF.
+                    .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
                     .logoutSuccessUrl("/login?logout")
                     .invalidateHttpSession(true)
                     .deleteCookies("JSESSIONID"))
@@ -72,7 +74,6 @@ public class SecurityConfig {
                     // SECURITY: a new session id at login, so a pre-set cookie cannot be
                     // ridden into an authenticated session.
                     .sessionFixation(fix -> fix.newSession()))
-            .logout(out -> out.logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST")))
             // SecurityHeaders sets all of these; one writer, one set of assertions.
             .headers(h -> h.disable());
         return http.build();
