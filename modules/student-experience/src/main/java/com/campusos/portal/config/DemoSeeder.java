@@ -3,7 +3,6 @@ package com.campusos.portal.config;
 import com.campusos.portal.domain.*;
 import com.campusos.portal.payload.*;
 import com.campusos.portal.repo.*;
-import com.campusos.portal.service.DemoIdentity;
 import com.campusos.portal.service.RequestService;
 import com.campusos.portal.service.Scope;
 import com.campusos.portal.service.SgpaMath;
@@ -32,7 +31,7 @@ public class DemoSeeder implements CommandLineRunner {
     private final SemesterResultRepository results;
     private final ExamTermRepository terms;
     private final RequestService requests;
-    private final DemoIdentity identities;
+    private final StudentAccountRepository studentAccounts;
     private final StaffUserRepository staff;
     private final TeachingAssignmentRepository assignments;
     private final SubjectMarkRepository marks;
@@ -40,7 +39,8 @@ public class DemoSeeder implements CommandLineRunner {
 
     public DemoSeeder(TenantRepository tenants, StudentRepository students,
                       AttendanceRepository attendance, SemesterResultRepository results,
-                      ExamTermRepository terms, RequestService requests, DemoIdentity identities,
+                      ExamTermRepository terms, RequestService requests,
+                      StudentAccountRepository studentAccounts,
                       StaffUserRepository staff, TeachingAssignmentRepository assignments,
                       SubjectMarkRepository marks, PasswordEncoder encoder) {
         this.tenants = tenants;
@@ -49,14 +49,32 @@ public class DemoSeeder implements CommandLineRunner {
         this.results = results;
         this.terms = terms;
         this.requests = requests;
-        this.identities = identities;
+        this.studentAccounts = studentAccounts;
         this.staff = staff;
         this.assignments = assignments;
         this.marks = marks;
         this.encoder = encoder;
     }
 
-    /** Demo password for every seeded staff account. Stored only as a BCrypt hash. */
+    /**
+     * One login per seeded student. The username is derived from the roll number, which is
+     * already unique inside a tenant and carries the institution prefix, so it cannot collide
+     * with a staff username (those are person-name based) — PortalLoginTest asserts the two
+     * sets stay disjoint rather than leaving that to luck.
+     */
+    private StudentAccount account(String tenantId, String studentId) {
+        Student s = students.findByIdAndTenantId(studentId, tenantId).orElseThrow();
+        StudentAccount a = new StudentAccount();
+        a.id = "sa_" + studentId.replaceFirst("^s_", "");
+        a.tenantId = tenantId;
+        a.studentId = studentId;
+        a.username = s.rollNo.toLowerCase();
+        a.passwordHash = encoder.encode(DEMO_PASSWORD);
+        a.active = true;
+        return studentAccounts.save(a);
+    }
+
+    /** Demo password for every seeded staff account and student login. BCrypt hash only. */
     private static final String DEMO_PASSWORD = "campus123";
 
     private static final String CSE = "Computer Science & Engineering";
@@ -71,7 +89,7 @@ public class DemoSeeder implements CommandLineRunner {
         Student hari = student("s_hari", snit.id, "SNIT21CS042", "Hari Prasad",
                 "hari.prasad@snit.ac.in", "B.Tech Computer Science", "Computer Science & Engineering",
                 5, "A", 12500, "Prof. Anjali Menon", "Dr. R. Krishnakumar");
-        identities.register(snit.id, hari.id, "Hari Prasad · SNIT (CSE, Sem 5)");
+        account(snit.id, hari.id);
 
         List<LocalDate> classDays = seedAttendance(snit.id, hari.id);
         seedMarksAndResults(snit.id, hari.id, "CS", 5);
@@ -82,7 +100,7 @@ public class DemoSeeder implements CommandLineRunner {
         Student divya = student("s_divya", snit.id, "SNIT21CS051", "Divya Rajan",
                 "divya.rajan@snit.ac.in", "B.Tech Computer Science", CSE,
                 5, "A", 0, "Prof. Anjali Menon", "Dr. R. Krishnakumar");
-        identities.register(snit.id, divya.id, "Divya Rajan · SNIT (CSE, Sem 5) — classmate");
+        account(snit.id, divya.id);
         List<LocalDate> divyaDays = seedAttendance(snit.id, divya.id);
         seedMarksAndResults(snit.id, divya.id, "CS", 5);
         requests.create(new Scope(snit.id, divya.id), RequestType.LEAVE,
@@ -94,7 +112,7 @@ public class DemoSeeder implements CommandLineRunner {
         Student nikhil = student("s_nikhil", snit.id, "SNIT21EC017", "Nikhil Varma",
                 "nikhil.varma@snit.ac.in", "B.Tech Electronics", ECE,
                 5, "A", 0, "Prof. Suresh Babu", "Dr. Geetha Menon");
-        identities.register(snit.id, nikhil.id, "Nikhil Varma · SNIT (ECE, Sem 5) — other department");
+        account(snit.id, nikhil.id);
         List<LocalDate> nikhilDays = seedAttendance(snit.id, nikhil.id);
         seedMarksAndResults(snit.id, nikhil.id, "EC", 5);
         requests.create(new Scope(snit.id, nikhil.id), RequestType.LEAVE,
@@ -109,7 +127,7 @@ public class DemoSeeder implements CommandLineRunner {
         Student meera = student("s_meera", ace.id, "ACE22EC118", "Meera Nair",
                 "meera.nair@ace.ac.in", "B.Tech Electronics", "Electronics & Communication",
                 3, "B", 0, "Prof. S. Ravi", "Dr. Latha Iyer");
-        identities.register(ace.id, meera.id, "Meera Nair · ACE (ECE, Sem 3) — isolation check");
+        account(ace.id, meera.id);
         List<LocalDate> aceDays = seedAttendance(ace.id, meera.id);
         seedMarksAndResults(ace.id, meera.id, "EC", 3);
         seedTerm(ace.id);

@@ -5,8 +5,8 @@ import com.campusos.portal.engine.IllegalTransitionException;
 import com.campusos.portal.repo.DocumentRepository;
 import com.campusos.portal.service.*;
 import com.campusos.portal.view.RequestCard;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,41 +33,37 @@ public class PortalController {
     private final RequestService requests;
     private final AcademicService academic;
     private final ScopeResolver scopes;
-    private final DemoIdentity identities;
     private final DocumentRepository documents;
 
     public PortalController(RequestService requests, AcademicService academic, ScopeResolver scopes,
-                            DemoIdentity identities, DocumentRepository documents) {
+                            DocumentRepository documents) {
         this.requests = requests;
         this.academic = academic;
         this.scopes = scopes;
-        this.identities = identities;
         this.documents = documents;
     }
 
     /* ------------------------------- shared ------------------------------- */
 
-    private Scope base(Model model, HttpSession session, String nav) {
-        Scope s = scopes.current(session);
+    /**
+     * Every handler starts here, and every handler gets its Scope from the AUTHENTICATED
+     * PRINCIPAL. There is no parameter, header or session attribute anywhere in this
+     * controller that can name a different student.
+     */
+    private Scope base(Model model, Authentication auth, String nav) {
+        Scope s = scopes.current(auth);
         model.addAttribute("student", requests.student(s));
         model.addAttribute("tenant", requests.tenant(s));
-        model.addAttribute("identities", identities.all());
         model.addAttribute("nav", nav);
         model.addAttribute("attendancePct", academic.attendancePct(s));
         return s;
     }
 
-    @PostMapping("/switch")
-    public String switchIdentity(@RequestParam String studentId, HttpSession session) {
-        scopes.switchTo(session, studentId);
-        return "redirect:/";
-    }
-
     /* -------------------------------- 1. HOME -------------------------------- */
 
-    @GetMapping("/")
-    public String home(Model model, HttpSession session) {
-        Scope s = base(model, session, "home");
+    @GetMapping({"/", "/home"})
+    public String home(Model model, Authentication auth) {
+        Scope s = base(model, auth, "home");
         List<RequestCard> all = requests.all(s);
         model.addAttribute("recent", all.stream().limit(5).toList());
         model.addAttribute("openCount", all.stream().filter(RequestCard::isOpen).count());
@@ -81,8 +77,8 @@ public class PortalController {
 
     @GetMapping("/requests")
     public String allRequests(@RequestParam(required = false) String filter,
-                              Model model, HttpSession session) {
-        Scope s = base(model, session, "requests");
+                              Model model, Authentication auth) {
+        Scope s = base(model, auth, "requests");
         List<RequestCard> cards = requests.all(s);
         if (filter != null && !filter.isBlank() && !"ALL".equals(filter)) {
             cards = cards.stream().filter(c -> c.type().equals(filter)).toList();
@@ -96,8 +92,8 @@ public class PortalController {
     /* -------------------------------- 3. LEAVE -------------------------------- */
 
     @GetMapping("/leave")
-    public String leave(Model model, HttpSession session) {
-        Scope s = base(model, session, "leave");
+    public String leave(Model model, Authentication auth) {
+        Scope s = base(model, auth, "leave");
         if (!model.containsAttribute("form")) model.addAttribute("form", new Forms.LeaveForm());
         model.addAttribute("cards", requests.ofType(s, RequestType.LEAVE));
         model.addAttribute("leaveTypes", com.campusos.portal.payload.LeavePayload.LeaveType.values());
@@ -106,8 +102,8 @@ public class PortalController {
 
     @PostMapping("/leave")
     public String submitLeave(@Valid @ModelAttribute("form") Forms.LeaveForm form, BindingResult binding,
-                              Model model, HttpSession session, RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+                              Model model, Authentication auth, RedirectAttributes ra) {
+        Scope s = scopes.current(auth);
         if (!binding.hasErrors()) {
             try {
                 requests.create(s, RequestType.LEAVE, form.toPayload());
@@ -117,7 +113,7 @@ public class PortalController {
                 binding.reject("payload", e.getMessage());
             }
         }
-        base(model, session, "leave");
+        base(model, auth, "leave");
         model.addAttribute("cards", requests.ofType(s, RequestType.LEAVE));
         model.addAttribute("leaveTypes", com.campusos.portal.payload.LeavePayload.LeaveType.values());
         return "leave";
@@ -126,8 +122,8 @@ public class PortalController {
     /* ----------------------------- 4. INTERNSHIP ----------------------------- */
 
     @GetMapping("/internship")
-    public String internship(Model model, HttpSession session) {
-        Scope s = base(model, session, "internship");
+    public String internship(Model model, Authentication auth) {
+        Scope s = base(model, auth, "internship");
         if (!model.containsAttribute("form")) model.addAttribute("form", new Forms.InternshipForm());
         model.addAttribute("cards", requests.ofType(s, RequestType.INTERNSHIP));
         return "internship";
@@ -135,9 +131,9 @@ public class PortalController {
 
     @PostMapping("/internship")
     public String submitInternship(@Valid @ModelAttribute("form") Forms.InternshipForm form,
-                                   BindingResult binding, Model model, HttpSession session,
+                                   BindingResult binding, Model model, Authentication auth,
                                    RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+        Scope s = scopes.current(auth);
         if (!binding.hasErrors()) {
             try {
                 requests.create(s, RequestType.INTERNSHIP, form.toPayload());
@@ -147,7 +143,7 @@ public class PortalController {
                 binding.reject("payload", e.getMessage());
             }
         }
-        base(model, session, "internship");
+        base(model, auth, "internship");
         model.addAttribute("cards", requests.ofType(s, RequestType.INTERNSHIP));
         return "internship";
     }
@@ -155,8 +151,8 @@ public class PortalController {
     /* ------------------------------ 5. DOCUMENTS ------------------------------ */
 
     @GetMapping("/documents")
-    public String documents(Model model, HttpSession session) {
-        Scope s = base(model, session, "documents");
+    public String documents(Model model, Authentication auth) {
+        Scope s = base(model, auth, "documents");
         if (!model.containsAttribute("form")) model.addAttribute("form", new Forms.DocumentForm());
         model.addAttribute("cards", requests.ofType(s, RequestType.DOCUMENT));
         model.addAttribute("issued", academic.documents(s));
@@ -166,9 +162,9 @@ public class PortalController {
 
     @PostMapping("/documents")
     public String submitDocument(@Valid @ModelAttribute("form") Forms.DocumentForm form,
-                                 BindingResult binding, Model model, HttpSession session,
+                                 BindingResult binding, Model model, Authentication auth,
                                  RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+        Scope s = scopes.current(auth);
         if (!binding.hasErrors() && !STUDENT_REQUESTABLE.contains(form.getDocType())) {
             binding.reject("docType", "That document is not one a student can request.");
         }
@@ -181,7 +177,7 @@ public class PortalController {
                 binding.reject("payload", e.getMessage());
             }
         }
-        base(model, session, "documents");
+        base(model, auth, "documents");
         model.addAttribute("cards", requests.ofType(s, RequestType.DOCUMENT));
         model.addAttribute("issued", academic.documents(s));
         model.addAttribute("docTypes", List.of(DocType.BONAFIDE, DocType.HALL_TICKET,
@@ -190,8 +186,8 @@ public class PortalController {
     }
 
     @GetMapping("/documents/{id}/download")
-    public ResponseEntity<String> download(@PathVariable Long id, HttpSession session) {
-        Scope s = scopes.current(session);
+    public ResponseEntity<String> download(@PathVariable Long id, Authentication auth) {
+        Scope s = scopes.current(auth);
         DocumentArtifact d = documents.findByIdAndTenantIdAndStudentId(id, s.tenantId(), s.studentId())
                 .orElseThrow(() -> new IllegalTransitionException("document not visible in scope"));
         String file = """
@@ -212,8 +208,8 @@ public class PortalController {
     /* ------------------------------- 6. ACADEMIC ------------------------------- */
 
     @GetMapping("/academic")
-    public String academicView(Model model, HttpSession session) {
-        Scope s = base(model, session, "academic");
+    public String academicView(Model model, Authentication auth) {
+        Scope s = base(model, auth, "academic");
         model.addAttribute("results", academic.results(s));
         model.addAttribute("cgpa", academic.cgpa(s));
         // Finalized subject marks only — this is where faculty authoring becomes visible.
@@ -228,8 +224,8 @@ public class PortalController {
     /* ------------------------------- 7. GRIEVANCE ------------------------------- */
 
     @GetMapping("/grievance")
-    public String grievance(Model model, HttpSession session) {
-        Scope s = base(model, session, "grievance");
+    public String grievance(Model model, Authentication auth) {
+        Scope s = base(model, auth, "grievance");
         if (!model.containsAttribute("form")) model.addAttribute("form", new Forms.GrievanceForm());
         model.addAttribute("cards", requests.ofType(s, RequestType.GRIEVANCE));
         model.addAttribute("categories", com.campusos.portal.payload.GrievancePayload.Category.values());
@@ -238,15 +234,15 @@ public class PortalController {
 
     @PostMapping("/grievance")
     public String submitGrievance(@Valid @ModelAttribute("form") Forms.GrievanceForm form,
-                                  BindingResult binding, Model model, HttpSession session,
+                                  BindingResult binding, Model model, Authentication auth,
                                   RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+        Scope s = scopes.current(auth);
         if (!binding.hasErrors()) {
             requests.create(s, RequestType.GRIEVANCE, form.toPayload());
             ra.addFlashAttribute("flash", "Grievance submitted and auto-assigned.");
             return "redirect:/grievance";
         }
-        base(model, session, "grievance");
+        base(model, auth, "grievance");
         model.addAttribute("cards", requests.ofType(s, RequestType.GRIEVANCE));
         model.addAttribute("categories", com.campusos.portal.payload.GrievancePayload.Category.values());
         return "grievance";

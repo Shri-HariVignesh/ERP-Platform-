@@ -82,7 +82,8 @@ public class FacultyService {
     public List<RequestCard> requestsOf(StaffScope scope, Student student) {
         if (!scope.canSee(student)) throw new StaffAccessException("student not in scope");
         Scope s = new Scope(student.tenantId, student.id);
-        return presentation.cards(s,
+        // staffCards, not cards: the download link on a DOCUMENT artifact is student-only.
+        return presentation.staffCards(s,
                 requests.findByTenantIdAndStudentIdOrderByCreatedAtDesc(student.tenantId, student.id));
     }
 

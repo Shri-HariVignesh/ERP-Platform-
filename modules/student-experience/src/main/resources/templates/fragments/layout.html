@@ -19,13 +19,15 @@
       </span>
     </a>
 
-    <form class="switcher" th:action="@{/switch}" method="post">
-      <label for="sw">Signed in as</label>
-      <select id="sw" name="studentId">
-        <option th:each="i : ${identities}" th:value="${i.studentId}"
-                th:text="${i.label}" th:selected="${i.studentId == student.id}"></option>
-      </select>
-      <button class="btn ghost" type="submit">Switch</button>
+    <!--/*
+      This slot used to hold the identity switcher: a dropdown of every seeded student that
+      POSTed a studentId to /switch, which then WROTE the session Scope. It was the student
+      equivalent of the retired /sim hook — the last place the client chose whose data it saw.
+      It is gone, and so is /switch. Who you are is now who you logged in as.
+    */-->
+    <form class="switcher" th:action="@{/logout}" method="post">
+      <label th:text="${student.name} + ' · ' + ${student.rollNo}">Signed in</label>
+      <button class="btn ghost" type="submit">Sign out</button>
     </form>
   </div>
 
@@ -37,7 +39,7 @@
     <a th:href="@{/documents}"  th:classappend="${nav=='documents'}  ? 'on'">Documents</a>
     <a th:href="@{/academic}"   th:classappend="${nav=='academic'}   ? 'on'">Academic</a>
     <a th:href="@{/grievance}"  th:classappend="${nav=='grievance'}  ? 'on'">Grievance</a>
-    <a class="staff-link" th:href="@{/faculty}">Staff sign in →</a>
+
   </nav>
 </header>
 

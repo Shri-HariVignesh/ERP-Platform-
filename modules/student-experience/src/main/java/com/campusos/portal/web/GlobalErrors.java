@@ -1,7 +1,7 @@
 package com.campusos.portal.web;
 
 import com.campusos.portal.engine.IllegalTransitionException;
-import com.campusos.portal.service.StaffAccessException;
+import com.campusos.portal.service.ScopeAccessException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,17 +34,20 @@ public class GlobalErrors {
     }
 
     /**
-     * A staff member reached outside their scope. 403, and the body says only that — it never
-     * reveals whether the thing they asked for exists, which would turn the id into an oracle
-     * for another department's or another tenant's data.
+     * Someone — staff or student — reached outside their scope. 403, and the body says only
+     * that: it never reveals whether the thing they asked for exists, which would turn the id
+     * into an oracle for another department's, another student's or another tenant's data.
+     *
+     * One handler for both sides on purpose. If a staff refusal and a student refusal read
+     * differently, the difference itself is information.
      */
-    @ExceptionHandler(StaffAccessException.class)
-    public ModelAndView denied(StaffAccessException e, HttpServletRequest req) {
-        log.warn("StaffAccessException: {}", e.getMessage());
+    @ExceptionHandler(ScopeAccessException.class)
+    public ModelAndView denied(ScopeAccessException e, HttpServletRequest req) {
+        log.warn("{}: {}", e.getClass().getSimpleName(), e.getMessage());
         return errorView(HttpStatus.FORBIDDEN, "Not available in your scope.", req);
     }
 
-    /** Same branded page GlobalErrors uses, so a scope or transition refusal never dumps a bare string. */
+    /** Same branded page for every refusal, so a scope or transition refusal never dumps a bare string. */
     private ModelAndView errorView(HttpStatus status, String message, HttpServletRequest req) {
         ModelAndView mv = new ModelAndView("error");
         mv.setStatus(status);

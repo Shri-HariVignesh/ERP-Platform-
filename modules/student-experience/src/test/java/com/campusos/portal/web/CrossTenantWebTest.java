@@ -11,7 +11,7 @@ import com.campusos.portal.engine.EngineTestBase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
@@ -24,12 +24,13 @@ class CrossTenantWebTest extends EngineTestBase {
     private static final String HARI = "s_hari";
     private static final String MEERA = "s_meera";
 
-    private MockHttpSession sessionFor(String studentId) throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").with(csrf()).param("studentId", studentId).session(session))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
-                        .status().is3xxRedirection());
-        return session;
+    /**
+     * Was: POST /switch with a studentId. That is exactly the client-chosen identity this
+     * work removes, so the harness now authenticates as the student instead. Every assertion
+     * below is unchanged — only how the session gets its identity has moved.
+     */
+    private RequestPostProcessor as(String studentId) {
+        return user(studentPrincipal(studentId));
     }
 
     private DocumentArtifact documentOf(String tenantId, String studentId) {
@@ -41,10 +42,10 @@ class CrossTenantWebTest extends EngineTestBase {
     @Test
     @DisplayName("a student can download their own generated document")
     void ownDocumentDownloads() throws Exception {
-        MockHttpSession meera = sessionFor(MEERA);
+        RequestPostProcessor meera = as(MEERA);
         DocumentArtifact hers = documentOf("t_ace", MEERA);
 
-        MvcResult res = mvc.perform(get("/documents/" + hers.id + "/download").session(meera))
+        MvcResult res = mvc.perform(get("/documents/" + hers.id + "/download").with(meera))
                 .andReturn();
 
         assertThat(res.getResponse().getStatus()).isEqualTo(200);
@@ -55,9 +56,9 @@ class CrossTenantWebTest extends EngineTestBase {
     @DisplayName("cross-tenant document download is refused with 400, and leaks no content")
     void crossTenantDownloadIsRefused() throws Exception {
         DocumentArtifact his = documentOf("t_snit", HARI);
-        MockHttpSession meera = sessionFor(MEERA);
+        RequestPostProcessor meera = as(MEERA);
 
-        MvcResult res = mvc.perform(get("/documents/" + his.id + "/download").session(meera))
+        MvcResult res = mvc.perform(get("/documents/" + his.id + "/download").with(meera))
                 .andReturn();
 
         assertThat(res.getResponse().getStatus()).isEqualTo(400);
@@ -85,13 +86,13 @@ class CrossTenantWebTest extends EngineTestBase {
     @Test
     @DisplayName("the tracker shows only the signed-in student's own requests")
     void trackerIsScoped() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
-        String hisPage = mvc.perform(get("/requests").session(hari))
+        RequestPostProcessor hari = as(HARI);
+        String hisPage = mvc.perform(get("/requests").with(hari))
                 .andReturn().getResponse().getContentAsString();
         assertThat(main(hisPage)).contains("Infosys").contains("Tata Elxsi");
 
-        MockHttpSession meera = sessionFor(MEERA);
-        String herPage = mvc.perform(get("/requests").session(meera))
+        RequestPostProcessor meera = as(MEERA);
+        String herPage = mvc.perform(get("/requests").with(meera))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(herPage).contains("Amrita College of Engineering");
@@ -103,23 +104,29 @@ class CrossTenantWebTest extends EngineTestBase {
                 .doesNotContain("Hari Prasad");
     }
 
+    /**
+     * STRENGTHENED. This used to carve out an exception: the demo identity switcher listed
+     * every seeded student, so Hari's name legitimately appeared on Meera's page and the test
+     * could only assert it appeared NOWHERE ELSE.
+     *
+     * The switcher is gone with /switch, so the carve-out is gone with it and the claim is now
+     * the flat one it always should have been: another student's name does not appear on this
+     * page at all, anywhere, for any reason.
+     */
     @Test
-    @DisplayName("Hari's name on Meera's page comes only from the demo identity picker, never from data")
-    void otherStudentAppearsOnlyInTheDemoSwitcher() throws Exception {
-        MockHttpSession meera = sessionFor(MEERA);
-        String herPage = mvc.perform(get("/requests").session(meera))
+    @DisplayName("no other student's name appears anywhere on a student's page")
+    void noOtherStudentAppearsAnywhere() throws Exception {
+        String herPage = mvc.perform(get("/requests").with(as(MEERA)))
                 .andReturn().getResponse().getContentAsString();
 
-        // real auth is a declared non-goal, so the header carries an identity switcher listing
-        // every seeded demo student. That is the ONLY place another student's name may appear.
-        int switcherFrom = herPage.indexOf("<form class=\"switcher\"");
-        int switcherTo = herPage.indexOf("</form>", switcherFrom);
-        String switcher = herPage.substring(switcherFrom, switcherTo);
-
-        assertThat(switcher).contains("Hari Prasad");
-        assertThat(herPage.replace(switcher, ""))
-                .as("outside the demo switcher, Hari does not exist on this page")
-                .doesNotContain("Hari Prasad");
+        assertThat(herPage)
+                .as("with no identity switcher there is no longer any excuse for another "
+                        + "student's name to be on this page")
+                .doesNotContain("Hari Prasad")
+                .doesNotContain("Divya Rajan")
+                .doesNotContain("Nikhil Varma")
+                .doesNotContain("SNIT21");
+        assertThat(herPage).as("and she does see her own").contains("Meera Nair");
     }
 
     /**

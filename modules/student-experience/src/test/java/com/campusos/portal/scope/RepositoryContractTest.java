@@ -45,6 +45,9 @@ class RepositoryContractTest extends EngineTestBase {
      *   StaffUserRepository#findByUsername     — the login lookup; authentication is what
      *                                            ESTABLISHES a tenant, so it cannot presuppose one
      *   StaffUserRepository#findByIdAndTenantId — the StaffUser's PK IS the staffId
+     *   StudentAccountRepository#findByUsername — the student half of the same login lookup;
+     *                                            authentication ESTABLISHES the tenant
+     *   StudentAccountRepository#findByIdAndTenantId — the account's PK IS the account id
      *   StudentRepository#findByTenantIdOrderByRollNoAsc — the INSTITUTION/OFFICE roster. Their
      *                                            breadth IS the tenant, so the tenant is the
      *                                            whole of the scope, not half of it.
@@ -56,6 +59,8 @@ class RepositoryContractTest extends EngineTestBase {
             "StudentRepository#findByIdAndTenantId",
             "StaffUserRepository#findByUsername",
             "StaffUserRepository#findByIdAndTenantId",
+            "StudentAccountRepository#findByUsername",
+            "StudentAccountRepository#findByIdAndTenantId",
             "StudentRepository#findByTenantIdOrderByRollNoAsc");
 
     /**
@@ -98,7 +103,9 @@ class RepositoryContractTest extends EngineTestBase {
                         "VerificationRepository", "SemesterResultRepository", "ExamTermRepository",
                         // the faculty module
                         "StaffUserRepository", "TeachingAssignmentRepository",
-                        "SubjectMarkRepository", "AcademicAuditRepository");
+                        "SubjectMarkRepository", "AcademicAuditRepository",
+                        // student authentication
+                        "StudentAccountRepository");
     }
 
     @Test
