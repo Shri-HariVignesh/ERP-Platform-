@@ -54,6 +54,37 @@ public class PresentationService {
         return card(scope, r, studentName(scope));
     }
 
+    /**
+     * THE STAFF RENDERING of a student's cards: the same read model, minus the links a staff
+     * member is not authorized to follow.
+     *
+     * /documents/{id}/download is STUDENT-only — a generated transcript belongs to the student
+     * who asked for it. The card's DOCUMENT artifact carries that href, so rendering a student's
+     * cards on a faculty screen would offer a link that 403s. The artifact still appears, with
+     * its serial and label intact; only the href is dropped, so the faculty Students view stays
+     * exactly as informative as it was and never dangles a dead link.
+     *
+     * The filter lives here rather than in the template for the same reason the draft-marks
+     * filter does: a template condition is one edit away from being forgotten.
+     */
+    public List<RequestCard> staffCards(Scope scope, List<Request> requests) {
+        List<RequestCard> out = new ArrayList<>();
+        for (RequestCard c : cards(scope, requests)) out.add(withoutStudentOnlyLinks(c));
+        return out;
+    }
+
+    private static RequestCard withoutStudentOnlyLinks(RequestCard c) {
+        List<Artifact> safe = new ArrayList<>();
+        for (Artifact a : c.artifacts()) {
+            safe.add("DOCUMENT".equals(a.kind())
+                    ? new Artifact(a.kind(), a.label(), a.value(), null)
+                    : a);
+        }
+        return new RequestCard(c.id(), c.type(), c.typeLabel(), c.title(), c.subtitle(),
+                c.state(), c.stateLabel(), c.badgeTone(), c.headline(), c.steps(),
+                c.studentAction(), safe, c.createdAt(), c.updatedAt(), c.trail());
+    }
+
     /** The student reads their own name in the trail, not the word "STUDENT". */
     private String studentName(Scope scope) {
         return students.findByIdAndTenantId(scope.studentId(), scope.tenantId())

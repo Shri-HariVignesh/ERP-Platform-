@@ -9,8 +9,8 @@ import com.campusos.portal.service.ScopeResolver;
 import com.campusos.portal.view.DisplayLabels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -46,8 +46,8 @@ public class SimController {
                           @RequestParam Actor actor,
                           @RequestParam(required = false) String note,
                           @RequestParam(defaultValue = "/requests") String back,
-                          HttpSession session, RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+                          Authentication auth, RedirectAttributes ra) {
+        Scope s = scopes.current(auth);
         try {
             requests.transition(s, id, event, actor, note);
             ra.addFlashAttribute("flash",
@@ -65,8 +65,8 @@ public class SimController {
                          @RequestParam Event event,
                          @RequestParam String reason,
                          @RequestParam(defaultValue = "/requests") String back,
-                         HttpSession session, RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+                         Authentication auth, RedirectAttributes ra) {
+        Scope s = scopes.current(auth);
         try {
             requests.transition(s, id, event, actor, reason);
             ra.addFlashAttribute("flash",

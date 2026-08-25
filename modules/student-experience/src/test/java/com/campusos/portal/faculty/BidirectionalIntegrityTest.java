@@ -15,7 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /**
  * THE BIDIRECTIONAL INTEGRITY CLAIM, end to end over HTTP.
@@ -30,7 +30,6 @@ import org.springframework.mock.web.MockHttpSession;
 class BidirectionalIntegrityTest extends EngineTestBase {
 
     @Autowired AcademicService academic;
-    @Autowired com.campusos.portal.service.DemoIdentity identities;
 
     private static final ClassKey CSE_5A =
             new ClassKey("Computer Science & Engineering", 5, "A");
@@ -51,7 +50,6 @@ class BidirectionalIntegrityTest extends EngineTestBase {
         s.advisorName = "Prof. Anjali Menon";
         s.hodName = "Dr. R. Krishnakumar";
         students.save(s);
-        identities.register(s.tenantId, s.id, s.name);
 
         // A class-day series, so the attendance percentage means something.
         LocalDate today = LocalDate.now();
@@ -65,10 +63,10 @@ class BidirectionalIntegrityTest extends EngineTestBase {
         return s;
     }
 
-    private MockHttpSession studentSession(String studentId) throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").with(csrf()).param("studentId", studentId).session(session));
-        return session;
+    /** The fixture student needs a real login now that Scope comes from the principal. */
+    private RequestPostProcessor studentSession(String studentId) {
+        return user(studentPrincipal(
+                students.findByIdAndTenantId(studentId, "t_snit").orElseThrow()));
     }
 
     /* --------------------- direction 1: student -> faculty --------------------- */
@@ -77,13 +75,13 @@ class BidirectionalIntegrityTest extends EngineTestBase {
     @DisplayName("a leave a student submits lands in their own faculty member's My Tasks")
     void studentSubmissionReachesTheRightFacultyInbox() throws Exception {
         Student s = fixtureStudent();
-        MockHttpSession session = studentSession(s.id);
+        RequestPostProcessor session = studentSession(s.id);
 
         List<LocalDate> future = attendance.findByTenantIdAndStudentId("t_snit", s.id).stream()
                 .filter(a -> a.status == AttendanceRecord.Status.SCHEDULED)
                 .map(a -> a.date).sorted().toList();
 
-        mvc.perform(post("/leave").with(csrf()).session(session)
+        mvc.perform(post("/leave").with(csrf()).with(session)
                 .param("leaveType", "MEDICAL")
                 .param("from", future.get(0).toString())
                 .param("to", future.get(1).toString())
@@ -116,12 +114,12 @@ class BidirectionalIntegrityTest extends EngineTestBase {
     @DisplayName("a faculty approval on the staff screen is the same record the student tracks")
     void facultyDecisionAppearsOnTheStudentsOwnTracker() throws Exception {
         Student s = fixtureStudent();
-        MockHttpSession session = studentSession(s.id);
+        RequestPostProcessor session = studentSession(s.id);
         List<LocalDate> future = attendance.findByTenantIdAndStudentId("t_snit", s.id).stream()
                 .filter(a -> a.status == AttendanceRecord.Status.SCHEDULED)
                 .map(a -> a.date).sorted().toList();
 
-        mvc.perform(post("/leave").with(csrf()).session(session)
+        mvc.perform(post("/leave").with(csrf()).with(session)
                 .param("leaveType", "EVENT")
                 .param("from", future.get(0).toString())
                 .param("to", future.get(0).toString())
@@ -136,7 +134,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
                 .param("event", "APPROVE").param("note", "Verified with the convenor")
                 .param("back", "/faculty/tasks"));
 
-        String tracker = mvc.perform(get("/requests").session(session))
+        String tracker = mvc.perform(get("/requests").with(session))
                 .andReturn().getResponse().getContentAsString();
         assertThat(tracker)
                 .as("the student sees the faculty member's decision and their words")
@@ -156,7 +154,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
     void facultyAttendanceReachesTheStudentsAcademicView() throws Exception {
         Student s = fixtureStudent();
         Scope studentScope = new Scope("t_snit", s.id);
-        MockHttpSession session = studentSession(s.id);
+        RequestPostProcessor session = studentSession(s.id);
 
         double before = academic.attendancePct(studentScope);
         LocalDate day = attendance.findByTenantIdAndStudentId("t_snit", s.id).stream()
@@ -173,7 +171,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
         double after = academic.attendancePct(studentScope);
         assertThat(after).as("the register moved the number").isLessThan(before);
 
-        String academicPage = mvc.perform(get("/academic").session(session))
+        String academicPage = mvc.perform(get("/academic").with(session))
                 .andReturn().getResponse().getContentAsString();
         assertThat(academicPage)
                 .as("and the student's own Academic page shows exactly that figure")
@@ -192,7 +190,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
     @DisplayName("finalized marks reach the student's Academic view; drafts never do")
     void facultyMarksReachTheStudentsAcademicView() throws Exception {
         Student s = fixtureStudent();
-        MockHttpSession session = studentSession(s.id);
+        RequestPostProcessor session = studentSession(s.id);
 
         // Draft first, over HTTP, exactly as the screen posts it.
         mvc.perform(post("/faculty/marks").with(csrf()).with(user(principal("anjali.menon")))
@@ -200,7 +198,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
                 .param("action", "draft")
                 .param("internal_" + s.id, "12").param("external_" + s.id, "13"));
 
-        String beforePublish = mvc.perform(get("/academic").session(session))
+        String beforePublish = mvc.perform(get("/academic").with(session))
                 .andReturn().getResponse().getContentAsString();
         assertThat(beforePublish)
                 .as("a draft is invisible on the student's page")
@@ -214,7 +212,7 @@ class BidirectionalIntegrityTest extends EngineTestBase {
                 .param("action", "finalize")
                 .param("internal_" + s.id, "36").param("external_" + s.id, "54"));
 
-        String afterPublish = mvc.perform(get("/academic").session(session))
+        String afterPublish = mvc.perform(get("/academic").with(session))
                 .andReturn().getResponse().getContentAsString();
         assertThat(afterPublish)
                 .as("finalizing publishes it to the student, grade and all")

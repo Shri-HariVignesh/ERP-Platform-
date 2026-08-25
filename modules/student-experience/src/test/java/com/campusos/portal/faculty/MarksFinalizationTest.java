@@ -3,6 +3,7 @@ package com.campusos.portal.faculty;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
@@ -47,8 +48,6 @@ class MarksFinalizationTest extends EngineTestBase {
         return Map.of(studentId, new AcademicWriteService.MarkInput(i, e));
     }
 
-    @Autowired com.campusos.portal.service.DemoIdentity identities;
-
     private static final java.util.concurrent.atomic.AtomicInteger SEQ =
             new java.util.concurrent.atomic.AtomicInteger();
 
@@ -74,7 +73,6 @@ class MarksFinalizationTest extends EngineTestBase {
         s.advisorName = "Advisor";
         s.hodName = "HOD";
         students.save(s);
-        identities.register(s.tenantId, s.id, s.name + " · test fixture");
         return s;
     }
 
@@ -250,9 +248,10 @@ class MarksFinalizationTest extends EngineTestBase {
         writes.saveMarks(anjali, CSE_5A, "CS502", one(student, 11, 12), MarkStatus.DRAFT);
         writes.saveMarks(anjali, CSE_5A, "CS501", one(student, 39, 58), MarkStatus.FINALIZED);
 
-        MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").with(csrf()).param("studentId", student).session(session));
-        String page = mvc.perform(get("/academic").session(session))
+        // The fixture student needs a real login now that Scope comes from the principal.
+        RequestPostProcessor session = user(studentPrincipal(
+                students.findByIdAndTenantId(student, "t_snit").orElseThrow()));
+        String page = mvc.perform(get("/academic").with(session))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(page).as("the finalized subject is on the page").contains("CS501");

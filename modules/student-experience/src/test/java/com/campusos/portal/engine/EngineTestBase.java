@@ -4,6 +4,7 @@ import com.campusos.portal.domain.*;
 import com.campusos.portal.payload.*;
 import com.campusos.portal.repo.*;
 import com.campusos.portal.security.StaffPrincipal;
+import com.campusos.portal.security.StudentPrincipal;
 import com.campusos.portal.service.Scope;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -40,6 +41,8 @@ public abstract class EngineTestBase {
     @Autowired protected DocumentRepository documents;
     @Autowired protected VerificationRepository verifications;
     @Autowired protected StaffUserRepository staffUsers;
+    @Autowired protected StudentAccountRepository studentAccounts;
+    @Autowired protected org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired protected TeachingAssignmentRepository teaching;
     @Autowired protected SubjectMarkRepository subjectMarks;
     @Autowired protected SemesterResultRepository semesterResults;
@@ -54,6 +57,45 @@ public abstract class EngineTestBase {
     protected StaffPrincipal principal(String username) {
         return new StaffPrincipal(staffUsers.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("no seeded staff user " + username)));
+    }
+
+    /**
+     * The authenticated STUDENT identity for a seeded student, for use with MockMvc's
+     * .with(user(...)). Resolved from the database exactly as a real login would, so a test
+     * cannot grant itself a student or a tenant the seed did not give it.
+     *
+     * This replaces the old sessionFor(studentId) helper, which POSTed to /switch. That helper
+     * let a test choose whose data it saw with a request parameter — the very thing this work
+     * removes — so every call site moves to a real principal rather than a nicer-looking switch.
+     */
+    protected StudentPrincipal studentPrincipal(String studentId) {
+        Student s = students.findByIdAndTenantId(studentId, tenantOf(studentId))
+                .orElseThrow(() -> new IllegalStateException("no such student " + studentId));
+        return new StudentPrincipal(studentAccounts
+                .findByTenantIdAndStudentId(s.tenantId, s.id)
+                .orElseGet(() -> mintAccount(s)));
+    }
+
+    /** Tests that build a Student at runtime need a login for it; this mints one on demand. */
+    protected StudentPrincipal studentPrincipal(Student s) {
+        return new StudentPrincipal(studentAccounts.findByTenantIdAndStudentId(s.tenantId, s.id)
+                .orElseGet(() -> mintAccount(s)));
+    }
+
+    private StudentAccount mintAccount(Student s) {
+        StudentAccount a = new StudentAccount();
+        a.id = "sa_test_" + s.id;
+        a.tenantId = s.tenantId;
+        a.studentId = s.id;
+        a.username = s.rollNo.toLowerCase();
+        a.passwordHash = passwordEncoder.encode("campus123");
+        a.active = true;
+        return studentAccounts.save(a);
+    }
+
+    /** The seeded students live in known tenants; this keeps call sites from repeating them. */
+    private String tenantOf(String studentId) {
+        return "s_meera".equals(studentId) ? "t_ace" : "t_snit";
     }
 
     /** One move through the guard. */

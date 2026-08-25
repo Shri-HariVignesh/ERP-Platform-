@@ -3,13 +3,25 @@ package com.campusos.portal.config;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Baseline response headers. No Spring Security in this prototype (real authentication is a
- * declared non-goal), so these are set directly rather than via its header writers.
+ * Baseline response headers, for EVERY response — including the ones Spring Security writes
+ * itself and never passes down the chain.
+ *
+ * ORDER IS LOAD-BEARING. This filter must run BEFORE springSecurityFilterChain (order -100).
+ * A redirect to /login or a 403 is produced inside that chain, which then does not call
+ * chain.doFilter, so a filter ordered after it never sees the response — and every refusal
+ * would go out with no CSP and no X-Frame-Options. Setting the headers on the way IN means
+ * they are already on the response whoever ends up writing it.
+ *
+ * Spring Security's own header writers stay disabled (SecurityConfig): one writer, one set
+ * of assertions.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class SecurityHeaders implements Filter {
 
     @Override

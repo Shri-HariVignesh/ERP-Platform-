@@ -74,8 +74,8 @@ JAR_HARI="$(mktemp)"; JAR_MEERA="$(mktemp)"
 # have to drive the app the way a browser does: fetch a page, read the token Thymeleaf put in
 # the form, send it back on the same session. Without this the POSTs 403 and the probes below
 # would silently test nothing — a green run that proves the setup failed, not that the app is safe.
-csrf() { # jar [path]
-  curl -s -b "$1" -c "$1" "${BASE}${2:-/leave}" \
+csrf() { # jar [path]  -- /login works for an anonymous jar; /leave needs a session
+  curl -s -b "$1" -c "$1" "${BASE}${2:-/login}" \
     | grep -o 'name="_csrf" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//'
 }
 post() { # jar path [curl args...]
@@ -83,18 +83,63 @@ post() { # jar path [curl args...]
   curl -s -b "$jar" -c "$jar" -X POST "${BASE}${path}" -d "_csrf=$(csrf "$jar")" "$@"
 }
 
-post "$JAR_HARI"  /switch -d studentId=s_hari  -o /dev/null
-post "$JAR_MEERA" /switch -d studentId=s_meera -o /dev/null
+# Students authenticate now; /switch is gone. login() FAILS CLOSED: it asserts the greeting
+# immediately, so a setup that silently did not log in fails the run here instead of letting
+# every scoped probe below read the wrong session and pass for the wrong reason.
+login() { # jar username
+  curl -s -o /dev/null -b "$1" -c "$1" -X POST "${BASE}/login" \
+    -d "_csrf=$(csrf "$1" /login)&username=$2&password=campus123"
+}
 
-check "CSRF token is issued into forms" \
-      "$([ -n "$(csrf "$JAR_HARI")" ] && echo 1 || echo 0)" "1"
-check "a POST with no CSRF token is refused" \
+login "$JAR_HARI"  snit21cs042
+login "$JAR_MEERA" ace22ec118
+
+check "student login actually took effect (hari)" \
+      "$(curl -s -b "$JAR_HARI" "${BASE}/home" | grep -c '<h1>Hello, Hari')" "1"
+check "student login actually took effect (meera)" \
+      "$(curl -s -b "$JAR_MEERA" "${BASE}/home" | grep -c '<h1>Hello, Meera')" "1"
+check "CSRF token is issued into student forms" \
+      "$([ -n "$(csrf "$JAR_HARI" /leave)" ] && echo 1 || echo 0)" "1"
+check "a student POST with no CSRF token is refused" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" -X POST "${BASE}/grievance" \
+         -d 'category=EXAM&subject=x&description=y')" "403"
+
+VERIFY_PATH="$(curl -s -b "$JAR_HARI" "${BASE}/academic" \
+  | grep -oE '/verify/[A-Za-z0-9-]+' | head -1)"
+
+# --- student authentication ---
+check "/switch is retired (404, controller absent)" \
       "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" -X POST "${BASE}/switch" \
-         -d studentId=s_meera)" "403"
-# Assert the greeting, not a bare name count: the demo switcher lists every seeded student,
-# so "does the page mention Meera" is true even when the switch silently failed.
-check "identity switch actually took effect" \
-      "$(curl -s -b "$JAR_MEERA" "${BASE}/" | grep -c '<h1>Hello, Meera')" "1"
+         -d "_csrf=$(csrf "$JAR_HARI" /leave)&studentId=s_divya")" "404"
+check "anonymous student route redirects to the login form" \
+      "$(curl -s -o /dev/null -w '%{redirect_url}' "${BASE}/requests" | grep -c '/login')" "1"
+check "anonymous student route leaks no page content" \
+      "$(curl -s "${BASE}/academic" | grep -c 'Hari Prasad')" "0"
+check "a studentId parameter cannot move a student's scope" \
+      "$(curl -s -b "$JAR_HARI" "${BASE}/requests?studentId=s_divya" | grep -c 'Divya Rajan')" "0"
+check "no other student appears on a student's page" \
+      "$(curl -s -b "$JAR_MEERA" "${BASE}/requests" | grep -c 'Hari Prasad')" "0"
+check "a student cannot reach the staff portal" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}/faculty/tasks")" "403"
+check "refusals still carry the security headers" \
+      "$(curl -s -D - -o /dev/null "${BASE}/requests" | grep -ci 'X-Frame-Options: DENY')" "1"
+
+# --- deny-by-default did not break what the pages actually load ---
+check "the only static asset still loads" \
+      "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/css/app.css")" "200"
+check "the login page loads its stylesheet anonymously" \
+      "$(curl -s "${BASE}/login" | grep -c '/css/app.css')" "1"
+check "an unmapped path is denied by default" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}/admin")" "403"
+check "the public verify page still loads with no session at all" \
+      "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}${VERIFY_PATH}")" "200"
+check "the public verify page still loads its stylesheet" \
+      "$(curl -s "${BASE}${VERIFY_PATH}" | grep -c '/css/app.css')" "1"
+check "the public verify page still renders its QR" \
+      "$(curl -s "${BASE}${VERIFY_PATH}" | grep -c '<svg')" "1"
+check "favicon is not a 403 under deny-by-default" \
+      "$([ "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/favicon.ico")" = "403" ] \
+         && echo bad || echo ok)" "ok"
 
 # --- the staff surface added by the Faculty module ---
 JAR_STAFF="$(mktemp)"
@@ -127,9 +172,23 @@ check "CSP script-src 'none'"                  "$(hdr "script-src 'none'")"     
 check "session cookie HttpOnly + SameSite"     "$(hdr 'HttpOnly; SameSite=Lax')"          "1"
 
 # --- A05 config exposure ---
+# These used to assert exactly 404, which held only because anyRequest() was permitAll and
+# nothing was mapped. Under deny-by-default an anonymous request is redirected to the login
+# form and an authenticated one gets 403, so a bare "== 404" would now fail for the RIGHT
+# reason and hide the property. The property is "never served", asserted three ways:
+#   1. anonymous never gets a 200
+#   2. an authenticated student never gets a 200 either — no login unlocks it
+#   3. whatever the status, no console or actuator content comes back
 for path in /h2-console /actuator /actuator/env; do
-  check "unreachable ${path}" \
-        "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}${path}")" "404"
+  anon="$(curl -s -o /dev/null -w '%{http_code}' "${BASE}${path}")"
+  authed="$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}${path}")"
+  check "unreachable ${path} (anonymous)" \
+        "$([ "$anon" = "200" ] && echo served || echo refused)" "refused"
+  check "unreachable ${path} (authenticated)" \
+        "$([ "$authed" = "200" ] && echo served || echo refused)" "refused"
+  check "no content leaks from ${path}" \
+        "$(curl -s -b "$JAR_HARI" "${BASE}${path}" \
+           | grep -ciE 'h2 console|jdbc:|"_links"|healthEndpoint' || true)" "0"
 done
 
 # --- A01 cross-tenant denial ---
@@ -147,8 +206,8 @@ check "no cross-tenant card content" \
 check "open redirect blocked" \
       "$(post "$JAR_HARI" /actions/req_x -o /dev/null -D - \
            -d 'event=RESUBMIT&back=https://evil.test' | grep -c "Location: ${BASE}/requests")" "1"
-check "no state-changing GET on /switch" \
-      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}/switch?studentId=s_meera")" "405"
+check "no state-changing GET on /switch (it does not exist at all)" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}/switch?studentId=s_meera")" "404"
 
 # --- A03 injection ---
 post "$JAR_HARI" /grievance -o /dev/null \
@@ -200,7 +259,7 @@ curl -s -o /dev/null -b "$JAR_STAFF" -c "$JAR_STAFF" -X POST \
 check "a request id cannot author a log record" \
       "$(tail -n +$((LOG_BEFORE+1)) "$LOG" | grep -acE '^2026-01-01')" "0"
 
-rm -f "$JAR_HARI" "$JAR_MEERA" "$JAR_STAFF"
+rm -f "$JAR_HARI" "$JAR_MEERA" "$JAR_STAFF" "$JAR_HARI.jar" "$JAR_MEERA.jar"
 
 section "Result"
 if [ "$FAIL" -gt 0 ]; then

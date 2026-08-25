@@ -15,7 +15,7 @@ import com.campusos.portal.payload.PayloadCodec;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
@@ -29,10 +29,9 @@ class SecurityRegressionTest extends EngineTestBase {
     private static final String MEERA = "s_meera";
     private static final String DIVYA = "s_divya";
 
-    private MockHttpSession sessionFor(String studentId) throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").with(csrf()).param("studentId", studentId).session(session));
-        return session;
+    /** Was POST /switch; now a real authenticated student. Assertions unchanged. */
+    private RequestPostProcessor as(String studentId) {
+        return user(studentPrincipal(studentId));
     }
 
     /* ---- FINDING 1: H2 console exposed (CWE-306) ---- */
@@ -51,10 +50,10 @@ class SecurityRegressionTest extends EngineTestBase {
     @Test
     @DisplayName("a student cannot request a document type the system reserves for itself")
     void cannotRequestSystemOnlyDocumentType() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
+        RequestPostProcessor hari = as(HARI);
         long before = countDocRequests("t_snit", HARI, DocType.INTERNSHIP_VERIFICATION);
 
-        mvc.perform(post("/documents").with(csrf()).session(hari)
+        mvc.perform(post("/documents").with(csrf()).with(hari)
                 .param("docType", "INTERNSHIP_VERIFICATION")
                 .param("purpose", "forged certificate attempt")
                 .param("copies", "1"));
@@ -67,10 +66,10 @@ class SecurityRegressionTest extends EngineTestBase {
     @Test
     @DisplayName("the document types a student may request are still accepted")
     void legitimateDocumentTypeStillWorks() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
+        RequestPostProcessor hari = as(HARI);
         long before = countDocRequests("t_snit", HARI, DocType.BONAFIDE);
 
-        mvc.perform(post("/documents").with(csrf()).session(hari)
+        mvc.perform(post("/documents").with(csrf()).with(hari)
                 .param("docType", "BONAFIDE").param("purpose", "regression check").param("copies", "1"));
 
         assertThat(countDocRequests("t_snit", HARI, DocType.BONAFIDE)).isEqualTo(before + 1);
@@ -131,7 +130,7 @@ class SecurityRegressionTest extends EngineTestBase {
 
         assertThat(mvc.perform(get("/verify/" + doc.verifyId)).andReturn().getResponse().getStatus())
                 .as("no session at all — an employer has no login").isEqualTo(200);
-        assertThat(mvc.perform(get("/verify/" + doc.verifyId).session(sessionFor(MEERA)))
+        assertThat(mvc.perform(get("/verify/" + doc.verifyId).with(as(MEERA)))
                 .andReturn().getResponse().getStatus())
                 .as("a different tenant must NOT be blocked; this is the QR target").isEqualTo(200);
     }
@@ -146,13 +145,13 @@ class SecurityRegressionTest extends EngineTestBase {
     @Test
     @DisplayName("the back parameter cannot bounce a student to an external site")
     void backParameterCannotOpenRedirect() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
+        RequestPostProcessor hari = as(HARI);
         String id = requests.findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI)
                 .get(0).id;
 
         for (String hostile : new String[] {
                 "http://evil.example/pwn", "//evil.example/pwn", "https://evil.example", "/../etc"}) {
-            String location = mvc.perform(post("/actions/" + id).with(csrf()).session(hari)
+            String location = mvc.perform(post("/actions/" + id).with(csrf()).with(hari)
                             .param("event", "RESUBMIT").param("back", hostile))
                     .andReturn().getResponse().getHeader("Location");
             assertThat(location)
@@ -198,11 +197,11 @@ class SecurityRegressionTest extends EngineTestBase {
     @Test
     @DisplayName("a legitimate back target is still honoured, on both surfaces")
     void legitimateBackTargetPreserved() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
+        RequestPostProcessor hari = as(HARI);
         String studentRequest = requests
                 .findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI).get(0).id;
 
-        assertThat(mvc.perform(post("/actions/" + studentRequest).with(csrf()).session(hari)
+        assertThat(mvc.perform(post("/actions/" + studentRequest).with(csrf()).with(hari)
                         .param("event", "RESUBMIT").param("back", "/leave"))
                 .andReturn().getResponse().getHeader("Location")).isEqualTo("/leave");
 
@@ -229,9 +228,20 @@ class SecurityRegressionTest extends EngineTestBase {
     /* ---- FINDING 4: security response headers (CWE-693) ---- */
 
     @Test
-    @DisplayName("baseline security headers are set on every response")
+    @DisplayName("baseline security headers are set on every response, refusals included")
     void securityHeadersPresent() throws Exception {
-        MvcResult res = mvc.perform(get("/")).andReturn();
+        // A refusal is a response too. Spring Security writes the redirect to /login from
+        // inside its own filter chain and never calls the rest of the chain, so if the header
+        // filter is ordered after it, every 302 and every 403 goes out bare. Assert the
+        // anonymous refusal FIRST — it is the case that regressed.
+        MvcResult refused = mvc.perform(get("/")).andReturn();
+        assertThat(refused.getResponse().getStatus()).isIn(302, 401, 403);
+        assertThat(refused.getResponse().getHeader("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(refused.getResponse().getHeader("X-Frame-Options")).isEqualTo("DENY");
+        assertThat(refused.getResponse().getHeader("Content-Security-Policy"))
+                .contains("frame-ancestors 'none'");
+
+        MvcResult res = mvc.perform(get("/").with(as(HARI))).andReturn();
         assertThat(res.getResponse().getHeader("X-Content-Type-Options")).isEqualTo("nosniff");
         assertThat(res.getResponse().getHeader("X-Frame-Options")).isEqualTo("DENY");
         assertThat(res.getResponse().getHeader("Referrer-Policy")).isEqualTo("no-referrer");
@@ -246,9 +256,9 @@ class SecurityRegressionTest extends EngineTestBase {
     void deniedRequestDoesNotEchoExceptionClass() throws Exception {
         DocumentArtifact his = documents.findByTenantIdAndStudentIdOrderByIssuedAtDesc("t_snit", HARI)
                 .get(0);
-        MockHttpSession meera = sessionFor(MEERA);
+        RequestPostProcessor meera = as(MEERA);
 
-        MvcResult res = mvc.perform(get("/documents/" + his.id + "/download").session(meera)).andReturn();
+        MvcResult res = mvc.perform(get("/documents/" + his.id + "/download").with(meera)).andReturn();
 
         assertThat(res.getResponse().getStatus()).isEqualTo(400);
         assertThat(res.getResponse().getContentAsString())
@@ -261,14 +271,14 @@ class SecurityRegressionTest extends EngineTestBase {
     @Test
     @DisplayName("a script payload in a free-text field is rendered escaped, never live")
     void scriptPayloadIsEscaped() throws Exception {
-        MockHttpSession hari = sessionFor(HARI);
+        RequestPostProcessor hari = as(HARI);
         String payload = "<script>alert(1)</script>";
 
-        mvc.perform(post("/grievance").with(csrf()).session(hari)
+        mvc.perform(post("/grievance").with(csrf()).with(hari)
                 .param("category", "EXAM").param("subject", payload)
                 .param("description", "xss regression probe"));
 
-        String page = mvc.perform(get("/requests").session(hari))
+        String page = mvc.perform(get("/requests").with(hari))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(page).doesNotContain(payload);

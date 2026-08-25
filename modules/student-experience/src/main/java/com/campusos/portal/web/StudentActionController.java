@@ -11,7 +11,7 @@ import com.campusos.portal.service.Scope;
 import com.campusos.portal.service.ScopeResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.servlet.http.HttpSession;
+import org.springframework.security.core.Authentication;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -41,8 +41,8 @@ public class StudentActionController {
                       @RequestParam(required = false) String note,
                       @RequestParam(required = false) String input,
                       @RequestParam(defaultValue = "/requests") String back,
-                      HttpSession session, RedirectAttributes ra) {
-        Scope s = scopes.current(session);
+                      Authentication auth, RedirectAttributes ra) {
+        Scope s = scopes.current(auth);
         try {
             Request r = requests.raw(s, id);
             requests.transition(s, id, event, Actor.STUDENT, note, patchFor(r, input));
