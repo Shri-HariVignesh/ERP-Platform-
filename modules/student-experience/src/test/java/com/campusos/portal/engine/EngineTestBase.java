@@ -3,6 +3,7 @@ package com.campusos.portal.engine;
 import com.campusos.portal.domain.*;
 import com.campusos.portal.payload.*;
 import com.campusos.portal.repo.*;
+import com.campusos.portal.security.StaffPrincipal;
 import com.campusos.portal.service.Scope;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -38,7 +39,22 @@ public abstract class EngineTestBase {
     @Autowired protected AcademicRecordRepository academic;
     @Autowired protected DocumentRepository documents;
     @Autowired protected VerificationRepository verifications;
+    @Autowired protected StaffUserRepository staffUsers;
+    @Autowired protected TeachingAssignmentRepository teaching;
+    @Autowired protected SubjectMarkRepository subjectMarks;
+    @Autowired protected SemesterResultRepository semesterResults;
+    @Autowired protected AcademicAuditRepository academicAudits;
     @Autowired protected MockMvc mvc;
+
+    /**
+     * The authenticated staff identity for a seeded username, for use with MockMvc's
+     * .with(user(...)). Resolved from the database exactly as a real login would, so a test
+     * cannot grant itself a role or a tenant the seed did not give it.
+     */
+    protected StaffPrincipal principal(String username) {
+        return new StaffPrincipal(staffUsers.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("no seeded staff user " + username)));
+    }
 
     /** One move through the guard. */
     public record Move(Event event, Actor actor, String note) {

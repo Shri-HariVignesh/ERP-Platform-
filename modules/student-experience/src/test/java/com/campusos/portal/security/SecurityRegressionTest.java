@@ -1,6 +1,8 @@
 package com.campusos.portal.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -25,10 +27,11 @@ class SecurityRegressionTest extends EngineTestBase {
 
     private static final String HARI = "s_hari";
     private static final String MEERA = "s_meera";
+    private static final String DIVYA = "s_divya";
 
     private MockHttpSession sessionFor(String studentId) throws Exception {
         MockHttpSession session = new MockHttpSession();
-        mvc.perform(post("/switch").param("studentId", studentId).session(session));
+        mvc.perform(post("/switch").with(csrf()).param("studentId", studentId).session(session));
         return session;
     }
 
@@ -51,7 +54,7 @@ class SecurityRegressionTest extends EngineTestBase {
         MockHttpSession hari = sessionFor(HARI);
         long before = countDocRequests("t_snit", HARI, DocType.INTERNSHIP_VERIFICATION);
 
-        mvc.perform(post("/documents").session(hari)
+        mvc.perform(post("/documents").with(csrf()).session(hari)
                 .param("docType", "INTERNSHIP_VERIFICATION")
                 .param("purpose", "forged certificate attempt")
                 .param("copies", "1"));
@@ -67,7 +70,7 @@ class SecurityRegressionTest extends EngineTestBase {
         MockHttpSession hari = sessionFor(HARI);
         long before = countDocRequests("t_snit", HARI, DocType.BONAFIDE);
 
-        mvc.perform(post("/documents").session(hari)
+        mvc.perform(post("/documents").with(csrf()).session(hari)
                 .param("docType", "BONAFIDE").param("purpose", "regression check").param("copies", "1"));
 
         assertThat(countDocRequests("t_snit", HARI, DocType.BONAFIDE)).isEqualTo(before + 1);
@@ -135,6 +138,11 @@ class SecurityRegressionTest extends EngineTestBase {
 
     /* ---- FINDING 7: open redirect via the `back` parameter (CWE-601) ---- */
 
+    /**
+     * REPOINTED FROM /sim, which is retired. The open-redirect property is unchanged and is
+     * now asserted on BOTH live surfaces that still take a `back` parameter: the student
+     * action endpoint, and the staff action endpoint that replaced the demo hook.
+     */
     @Test
     @DisplayName("the back parameter cannot bounce a student to an external site")
     void backParameterCannotOpenRedirect() throws Exception {
@@ -144,32 +152,78 @@ class SecurityRegressionTest extends EngineTestBase {
 
         for (String hostile : new String[] {
                 "http://evil.example/pwn", "//evil.example/pwn", "https://evil.example", "/../etc"}) {
-            String location = mvc.perform(post("/sim/requests/" + id + "/advance").session(hari)
-                            .param("event", "APPROVE").param("actor", "FACULTY")
-                            .param("back", hostile))
+            String location = mvc.perform(post("/actions/" + id).with(csrf()).session(hari)
+                            .param("event", "RESUBMIT").param("back", hostile))
                     .andReturn().getResponse().getHeader("Location");
             assertThat(location)
                     .as("back=%s must not leave the application", hostile)
                     .doesNotContain("evil.example")
                     .isEqualTo("/requests");
-
-            String location2 = mvc.perform(post("/actions/" + id).session(hari)
-                            .param("event", "RESUBMIT").param("back", hostile))
-                    .andReturn().getResponse().getHeader("Location");
-            assertThat(location2).doesNotContain("evil.example").isEqualTo("/requests");
         }
     }
 
     @Test
-    @DisplayName("a legitimate back target is still honoured")
+    @DisplayName("the staff back parameter cannot bounce a faculty member off-site either")
+    void staffBackParameterCannotOpenRedirect() throws Exception {
+        for (String hostile : new String[] {
+                "http://evil.example/pwn", "//evil.example/pwn", "https://evil.example", "/../etc"}) {
+            // A fresh request per probe: the first APPROVE really moves it, and a spent
+            // request would then be refused for the wrong reason.
+            String location = mvc.perform(post("/faculty/requests/" + freshPendingLeave() + "/act")
+                            .with(csrf()).with(user(principal("anjali.menon")))
+                            .param("event", "APPROVE").param("back", hostile))
+                    .andReturn().getResponse().getHeader("Location");
+            assertThat(location)
+                    .as("back=%s must not leave the application", hostile)
+                    .doesNotContain("evil.example")
+                    .isEqualTo("/faculty/tasks");
+        }
+    }
+
+    /** ADDED per the freeze conditions: the replacement endpoint refuses anonymous callers. */
+    @Test
+    @DisplayName("the staff action endpoint is not reachable without a login")
+    void staffActionRequiresAuthentication() throws Exception {
+        String id = freshPendingLeave();
+        var res = mvc.perform(post("/faculty/requests/" + id + "/act").with(csrf())
+                .param("event", "APPROVE").param("back", "/faculty/tasks")).andReturn().getResponse();
+
+        assertThat(res.getStatus()).isIn(302, 401, 403);
+        if (res.getStatus() == 302) assertThat(res.getHeader("Location")).contains("/login");
+        assertThat(requests.findByIdAndTenantIdAndStudentId(id, "t_snit", DIVYA).orElseThrow().state)
+                .as("an anonymous POST changed nothing")
+                .isEqualTo(com.campusos.portal.domain.RequestState.FACULTY_PENDING);
+    }
+
+    @Test
+    @DisplayName("a legitimate back target is still honoured, on both surfaces")
     void legitimateBackTargetPreserved() throws Exception {
         MockHttpSession hari = sessionFor(HARI);
-        String id = requests.findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI).get(0).id;
+        String studentRequest = requests
+                .findByTenantIdAndStudentIdOrderByCreatedAtDesc("t_snit", HARI).get(0).id;
 
-        String location = mvc.perform(post("/sim/requests/" + id + "/advance").session(hari)
-                        .param("event", "APPROVE").param("actor", "FACULTY").param("back", "/leave"))
-                .andReturn().getResponse().getHeader("Location");
-        assertThat(location).isEqualTo("/leave");
+        assertThat(mvc.perform(post("/actions/" + studentRequest).with(csrf()).session(hari)
+                        .param("event", "RESUBMIT").param("back", "/leave"))
+                .andReturn().getResponse().getHeader("Location")).isEqualTo("/leave");
+
+        assertThat(mvc.perform(post("/faculty/requests/" + freshPendingLeave() + "/act").with(csrf())
+                        .with(user(principal("anjali.menon")))
+                        .param("event", "APPROVE").param("back", "/faculty/leave"))
+                .andReturn().getResponse().getHeader("Location")).isEqualTo("/faculty/leave");
+    }
+
+    /**
+     * A brand-new leave request for Divya — a student of Anjali's own class — sitting at
+     * FACULTY_PENDING. Created through the real engine, so it is a genuine inbox item.
+     */
+    private String freshPendingLeave() {
+        var future = attendance.findByTenantIdAndStudentId("t_snit", DIVYA).stream()
+                .filter(a -> a.status == com.campusos.portal.domain.AttendanceRecord.Status.SCHEDULED)
+                .map(a -> a.date).sorted().toList();
+        var r = machine.create(new com.campusos.portal.service.Scope("t_snit", DIVYA),
+                RequestType.LEAVE, leave(future.get(0), future.get(1)));
+        assertThat(r.state).isEqualTo(com.campusos.portal.domain.RequestState.FACULTY_PENDING);
+        return r.id;
     }
 
     /* ---- FINDING 4: security response headers (CWE-693) ---- */
@@ -210,7 +264,7 @@ class SecurityRegressionTest extends EngineTestBase {
         MockHttpSession hari = sessionFor(HARI);
         String payload = "<script>alert(1)</script>";
 
-        mvc.perform(post("/grievance").session(hari)
+        mvc.perform(post("/grievance").with(csrf()).session(hari)
                 .param("category", "EXAM").param("subject", payload)
                 .param("description", "xss regression probe"));
 

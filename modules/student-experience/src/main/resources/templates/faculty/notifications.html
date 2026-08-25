@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{faculty/layout :: head('Notifications')}"></head>
+<body>
+<header th:replace="~{faculty/layout :: header}"></header>
+
+<main class="wrap">
+  <div th:replace="~{faculty/layout :: flash}"></div>
+
+  <section class="hero">
+    <h1>Notifications</h1>
+    <p class="sub">In-app only. Nothing here is stored twice: a notification is the request
+      trail and the academic audit read from the staff side, so it cannot disagree with what
+      actually happened.</p>
+  </section>
+
+  <ul class="record notices">
+    <li th:each="n : ${notices}">
+      <div>
+        <span class="kind" th:text="${n.kind()}">kind</span>
+        <strong th:text="${n.title()}">title</strong>
+        <p th:text="${n.detail()}">detail</p>
+      </div>
+      <div class="right">
+        <span th:text="${n.who()}">who</span>
+        <span class="when" th:text="${n.at()}">when</span>
+        <a th:href="@{${n.href()}}">Open →</a>
+      </div>
+    </li>
+  </ul>
+  <p class="empty" th:if="${notices.isEmpty()}">Nothing yet.</p>
+</main>
+</body>
+</html>

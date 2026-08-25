@@ -3,6 +3,15 @@ package com.campusos.portal.domain;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+/**
+ * ONE ROW PER STUDENT PER CLASS DAY. There is deliberately no subject dimension: attendance
+ * is a class-day series, so exactly one percentage exists for a student and every writer —
+ * the leave workflow and a faculty member marking a register — edits the SAME row for a date.
+ *
+ * A per-subject dimension was considered and rejected: mixing a daily series with per-subject
+ * rows would make AttendanceMath.pct() average two different things, and the number the
+ * student reads would silently stop meaning "share of class days attended".
+ */
 @Entity
 @Table(name = "attendance", indexes = @Index(columnList = "tenantId,studentId"))
 public class AttendanceRecord {
@@ -19,7 +28,11 @@ public class AttendanceRecord {
     @Enumerated(EnumType.STRING)
     public Status status;
 
+    /** Set when the leave workflow mutated this row. */
     public String sourceRequestId;
+
+    /** Set when a faculty member marked this row through AcademicWriteService. */
+    public String markedByStaffId;
 
     public AttendanceRecord() {}
 

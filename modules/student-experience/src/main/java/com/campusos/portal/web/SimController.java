@@ -10,18 +10,22 @@ import com.campusos.portal.view.DisplayLabels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * DEMO HOOK — not a staff UI (staff UI is a declared non-goal).
+ * RETIRED. This was the demo hook that let a reviewer move a request "as" a staff actor by
+ * naming that actor in the POST body — the last endpoint in the application that accepted a
+ * client-supplied Actor. The Faculty module replaced it: /faculty/requests/{id}/act takes an
+ * event only and DERIVES the actor from the authenticated principal.
  *
- * These endpoints exist only so a reviewer can move a request the way a Faculty/HOD/
- * Institution/Office actor would. They call the SAME RequestStateMachine.transition()
- * guard as everything else, so an illegal event/actor combination is rejected here too —
- * try POST /sim/requests/{id}/advance?event=APPROVE&actor=STUDENT and it will 400.
+ * It is kept, behind the `demo` profile, purely so the old behaviour can be reproduced side
+ * by side. In the default profile this controller is not registered at all and every /sim
+ * path is a 404 — asserted by SimRetirementTest.
  */
+@Profile("demo")
 @Controller
 @RequestMapping("/sim")
 public class SimController {

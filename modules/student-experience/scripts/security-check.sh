@@ -69,8 +69,52 @@ if ! curl -sf -o /dev/null "${BASE}/"; then
 fi
 
 JAR_HARI="$(mktemp)"; JAR_MEERA="$(mktemp)"
-curl -s -o /dev/null -c "$JAR_HARI"  -X POST "${BASE}/switch" -d studentId=s_hari
-curl -s -o /dev/null -c "$JAR_MEERA" -X POST "${BASE}/switch" -d studentId=s_meera
+
+# CSRF is enforced on every POST since the Faculty module added Spring Security. These probes
+# have to drive the app the way a browser does: fetch a page, read the token Thymeleaf put in
+# the form, send it back on the same session. Without this the POSTs 403 and the probes below
+# would silently test nothing — a green run that proves the setup failed, not that the app is safe.
+csrf() { # jar [path]
+  curl -s -b "$1" -c "$1" "${BASE}${2:-/leave}" \
+    | grep -o 'name="_csrf" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//'
+}
+post() { # jar path [curl args...]
+  local jar="$1" path="$2"; shift 2
+  curl -s -b "$jar" -c "$jar" -X POST "${BASE}${path}" -d "_csrf=$(csrf "$jar")" "$@"
+}
+
+post "$JAR_HARI"  /switch -d studentId=s_hari  -o /dev/null
+post "$JAR_MEERA" /switch -d studentId=s_meera -o /dev/null
+
+check "CSRF token is issued into forms" \
+      "$([ -n "$(csrf "$JAR_HARI")" ] && echo 1 || echo 0)" "1"
+check "a POST with no CSRF token is refused" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" -X POST "${BASE}/switch" \
+         -d studentId=s_meera)" "403"
+# Assert the greeting, not a bare name count: the demo switcher lists every seeded student,
+# so "does the page mention Meera" is true even when the switch silently failed.
+check "identity switch actually took effect" \
+      "$(curl -s -b "$JAR_MEERA" "${BASE}/" | grep -c '<h1>Hello, Meera')" "1"
+
+# --- the staff surface added by the Faculty module ---
+JAR_STAFF="$(mktemp)"
+curl -s -o /dev/null -b "$JAR_STAFF" -c "$JAR_STAFF" -X POST "${BASE}/login" \
+  -d "_csrf=$(csrf "$JAR_STAFF" /login)&username=anjali.menon&password=campus123"
+
+check "staff form login succeeds" \
+      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_STAFF" "${BASE}/faculty/tasks")" "200"
+check "anonymous staff route redirects to the login form" \
+      "$(curl -s -o /dev/null -w '%{redirect_url}' "${BASE}/faculty/tasks" | grep -c '/login')" "1"
+check "anonymous staff route leaks no page content" \
+      "$(curl -s "${BASE}/faculty/students" | grep -c 'Hari Prasad')" "0"
+check "/sim is retired (404, controller absent)" \
+      "$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/sim/requests/x/advance")" "404"
+check "no form anywhere posts a client-supplied actor" \
+      "$(curl -s -b "$JAR_STAFF" "${BASE}/faculty/tasks" | grep -c 'name="actor"')" "0"
+check "wrong staff password is refused" \
+      "$(curl -s -o /dev/null -w '%{redirect_url}' -b "$JAR_STAFF" -c "$JAR_STAFF" \
+         -X POST "${BASE}/login" -d "_csrf=$(csrf "$JAR_STAFF" /login)&username=anjali.menon&password=nope" \
+         | grep -c 'error')" "1"
 
 hdr() { curl -s -D - -o /dev/null "${BASE}/" | grep -ci -- "$1"; }
 
@@ -101,13 +145,13 @@ check "no cross-tenant card content" \
 
 # --- A01 open redirect + state-changing GET ---
 check "open redirect blocked" \
-      "$(curl -s -o /dev/null -D - -b "$JAR_HARI" -X POST "${BASE}/actions/req_x" \
+      "$(post "$JAR_HARI" /actions/req_x -o /dev/null -D - \
            -d 'event=RESUBMIT&back=https://evil.test' | grep -c "Location: ${BASE}/requests")" "1"
 check "no state-changing GET on /switch" \
       "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" "${BASE}/switch?studentId=s_meera")" "405"
 
 # --- A03 injection ---
-curl -s -o /dev/null -b "$JAR_HARI" -X POST "${BASE}/grievance" \
+post "$JAR_HARI" /grievance -o /dev/null \
   --data-urlencode 'category=OTHER' \
   --data-urlencode 'subject=<script>alert(1)</script>' \
   --data-urlencode 'description=[[${7*7}]] "><img src=x onerror=alert(1)>'
@@ -119,7 +163,7 @@ check "no Thymeleaf SSTI evaluation" \
 
 # --- business logic ---
 check "system-only docType refused" \
-      "$(curl -s -b "$JAR_HARI" -X POST "${BASE}/documents" \
+      "$(post "$JAR_HARI" /documents \
            -d 'docType=INTERNSHIP_VERIFICATION&purpose=x&copies=1' \
          | grep -c 'not one a student can request')" "1"
 
@@ -134,26 +178,29 @@ check "verify id keeps a >=12 symbol random suffix" \
 
 # --- F3 / F4 input handling ---
 BIG="$(python3 -c 'print("A"*100000)')"
-curl -s -o /dev/null -b "$JAR_HARI" -X POST "${BASE}/internship" \
+post "$JAR_HARI" /internship -o /dev/null \
   --data-urlencode "company=${BIG}" --data-urlencode 'role=r' \
   --data-urlencode 'from=2026-01-01' --data-urlencode 'to=2026-03-01' \
   --data-urlencode 'details=d' --data-urlencode 'certificateFilename=c.pdf'
 check "oversized field never reaches a rendered page" \
       "$(curl -s -b "$JAR_HARI" "${BASE}/internship" | grep -c 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')" "0"
 check "malformed date is not a 500" \
-      "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_HARI" -X POST "${BASE}/leave" \
+      "$(post "$JAR_HARI" /leave -o /dev/null -w '%{http_code}' \
            --data-urlencode 'leaveType=PERSONAL' --data-urlencode 'from=NOTADATE' \
            --data-urlencode 'to=NOTADATE' --data-urlencode 'reason=probe')" "200"
 
 # --- F6 log injection ---
+# The original probe drove /sim, which the Faculty module retired. The property is
+# unchanged, so it now drives the endpoint that replaced it — with a real staff session,
+# because an anonymous POST would be refused before the id was ever logged.
 LOG_BEFORE="$(wc -l < "$LOG")"
-curl -s -o /dev/null -b "$JAR_HARI" -X POST \
-  "${BASE}/sim/requests/req_x%0d%0a2026-01-01T00:00:00.000+05:30++ERROR+FORGED/advance" \
-  -d 'event=APPROVE&actor=FACULTY'
+curl -s -o /dev/null -b "$JAR_STAFF" -c "$JAR_STAFF" -X POST \
+  "${BASE}/faculty/requests/req_x%0d%0a2026-01-01T00:00:00.000+05:30++ERROR+FORGED/act" \
+  -d "_csrf=$(csrf "$JAR_STAFF" /faculty/tasks)&event=APPROVE"
 check "a request id cannot author a log record" \
       "$(tail -n +$((LOG_BEFORE+1)) "$LOG" | grep -acE '^2026-01-01')" "0"
 
-rm -f "$JAR_HARI" "$JAR_MEERA"
+rm -f "$JAR_HARI" "$JAR_MEERA" "$JAR_STAFF"
 
 section "Result"
 if [ "$FAIL" -gt 0 ]; then

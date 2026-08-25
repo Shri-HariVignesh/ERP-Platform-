@@ -59,18 +59,14 @@
       </li>
     </ol>
 
-    <!-- DEMO HOOK: not a staff UI. Same guard, different actor. -->
-    <div class="sim" th:if="${!c.staffActions.isEmpty()}">
-      <p class="simlabel">Demo hook — simulate the staff actor (calls the same guard)</p>
-      <form th:each="a : ${c.staffActions}" th:action="@{'/sim/requests/' + ${c.id} + '/advance'}"
-            method="post" class="act">
-        <input type="hidden" name="event" th:value="${a.event}">
-        <input type="hidden" name="actor" th:value="${a.actor}">
-        <input type="hidden" name="back" th:value="${back}">
-        <textarea th:if="${a.requiresNote}" name="note" required placeholder="Reason (required)"></textarea>
-        <button type="submit" th:class="'btn ' + ${a.tone}" th:text="${a.label}">Advance</button>
-      </form>
-    </div>
+    <!--
+      The demo hook that used to live here is gone. It rendered a form per staff action with
+      the ACTOR in a hidden field, and posted it to /sim — the last place in the application
+      where the client told the server who it was acting as.
+
+      Staff decisions now happen on the staff surface (/faculty), where the actor is derived
+      from the authenticated principal and never travels in a form.
+    -->
   </details>
 
 </article>

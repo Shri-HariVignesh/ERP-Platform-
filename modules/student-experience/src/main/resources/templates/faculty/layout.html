@@ -1,0 +1,81 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="'CampusOS Staff · ' + ${title}">CampusOS Staff</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<header th:fragment="header" class="topbar staff">
+  <div class="wrap bar">
+    <a class="brand" th:href="@{/faculty}">
+      <span class="mark" th:text="${tenant.shortName}">SNIT</span>
+      <span>
+        <strong th:text="${tenant.name}">Institute</strong>
+        <small th:text="'Staff · ' + ${#strings.listJoin(roleLabels, ' · ')}">Staff</small>
+      </span>
+    </a>
+
+    <form class="switcher" th:action="@{/logout}" method="post">
+      <label th:text="${staff.name()}">Staff</label>
+      <button class="btn ghost" type="submit">Sign out</button>
+    </form>
+  </div>
+
+  <!--
+    Pass 3 of the design: an entry surface exists only where this principal is authorized.
+    Leave needs FACULTY or HOD; Internship needs FACULTY or INSTITUTION; Attendance and Marks
+    need at least one teaching assignment. The server re-checks every one of these on POST —
+    hiding a tab is a courtesy, never the control.
+  -->
+  <nav class="wrap tabs">
+    <a th:href="@{/faculty}"              th:classappend="${nav=='home'}          ? 'on'">Home</a>
+    <a th:href="@{/faculty/tasks}"        th:classappend="${nav=='tasks'}         ? 'on'">
+      My Tasks<span class="pill" th:if="${pending > 0}" th:text="${pending}">0</span></a>
+    <a th:href="@{/faculty/students}"     th:classappend="${nav=='students'}      ? 'on'">Students</a>
+    <a th:if="${canLeave}"      th:href="@{/faculty/leave}"      th:classappend="${nav=='leave'}      ? 'on'">Leave</a>
+    <a th:if="${canInternship}" th:href="@{/faculty/internship}" th:classappend="${nav=='internship'} ? 'on'">Internship</a>
+    <a th:if="${canAuthor}"     th:href="@{/faculty/attendance}" th:classappend="${nav=='attendance'} ? 'on'">Attendance</a>
+    <a th:if="${canAuthor}"     th:href="@{/faculty/marks}"      th:classappend="${nav=='marks'}      ? 'on'">Marks &amp; Results</a>
+    <a th:href="@{/faculty/notifications}" th:classappend="${nav=='notifications'} ? 'on'">Notifications</a>
+  </nav>
+</header>
+
+<div th:fragment="flash">
+  <p class="flash ok"  th:if="${flash}" th:text="${flash}"></p>
+  <p class="flash bad" th:if="${error}" th:text="${error}"></p>
+</div>
+
+<!--
+  Class + subject picker, shared by Attendance and Marks. Built ONLY from this staff member's
+  own assignments, so there is no other value to choose from in the first place — and the POST
+  re-validates the choice against those same assignments regardless.
+
+  It submits with a real button rather than an onchange handler: the Content-Security-Policy
+  on every response is script-src 'none', so this page has to work with no JavaScript at all.
+-->
+<form th:fragment="picker(action, extra)" class="picker" th:action="@{${action}}" method="get">
+  <label>Class
+    <select name="clazz">
+      <option th:each="c : ${classes}" th:value="${c.token()}" th:text="${c.label()}"
+              th:selected="${c.token() == clazz.token()}"></option>
+    </select>
+  </label>
+  <label>Subject
+    <select name="subject">
+      <option th:each="a : ${subjects}" th:value="${a.subjectCode}"
+              th:text="${a.subjectCode} + ' · ' + ${a.subjectName}"
+              th:selected="${a.subjectCode == subject}"></option>
+    </select>
+  </label>
+  <label th:if="${extra == 'date'}">Date
+    <input type="date" name="date" th:value="${date}" th:max="${today}">
+  </label>
+  <button class="btn ghost" type="submit">Show</button>
+</form>
+
+</body>
+</html>

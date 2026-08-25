@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{faculty/layout :: head('Attendance')}"></head>
+<body>
+<header th:replace="~{faculty/layout :: header}"></header>
+
+<main class="wrap">
+  <div th:replace="~{faculty/layout :: flash}"></div>
+
+  <section class="hero">
+    <h1>Attendance</h1>
+    <p class="sub">One row per student per class day — there is no per-subject register, on
+      purpose. The subject you pick is what authorizes you to mark this class; the row itself
+      stays a single class-day record, so the percentage keeps meaning "share of class days
+      attended" and the number here is the same number the student reads.</p>
+  </section>
+
+  <div th:replace="~{faculty/layout :: picker('/faculty/attendance', 'date')}"></div>
+
+  <form th:action="@{/faculty/attendance}" method="post">
+    <input type="hidden" name="clazz" th:value="${clazz.token()}">
+    <input type="hidden" name="subject" th:value="${subject}">
+    <input type="hidden" name="date" th:value="${date}">
+
+    <table class="tbl register">
+      <thead>
+        <tr><th>Roll no</th><th>Name</th><th>Present</th><th>Absent</th><th>Recorded</th><th>Attendance</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="s : ${roster}">
+          <td th:text="${s.rollNo}">roll</td>
+          <td th:text="${s.name}">name</td>
+          <td>
+            <input type="radio" th:name="'status_' + ${s.id}" value="PRESENT"
+                   th:disabled="${current.get(s.id) == 'APPROVED_LEAVE'}"
+                   th:checked="${current.get(s.id) == 'PRESENT'}">
+          </td>
+          <td>
+            <input type="radio" th:name="'status_' + ${s.id}" value="ABSENT"
+                   th:disabled="${current.get(s.id) == 'APPROVED_LEAVE'}"
+                   th:checked="${current.get(s.id) == 'ABSENT'}">
+          </td>
+          <td>
+            <span th:if="${current.get(s.id) == 'APPROVED_LEAVE'}" class="badge success">Approved leave</span>
+            <span th:if="${current.get(s.id) == 'SCHEDULED'}" class="muted">Not marked</span>
+            <span th:if="${current.get(s.id) == null}" class="muted">No class day</span>
+            <span th:if="${current.get(s.id) == 'PRESENT' or current.get(s.id) == 'ABSENT'}"
+                  class="muted">Marked</span>
+          </td>
+          <td th:text="${pct.get(s.id)} != null ? ${pct.get(s.id)} + '%' : '—'">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="hint">Approved-leave days are locked. That status is written by the leave
+      workflow when an HOD approves, and the register is not the place to undo a completed
+      approval.</p>
+
+    <button class="btn success" type="submit">Save register</button>
+  </form>
+</main>
+</body>
+</html>

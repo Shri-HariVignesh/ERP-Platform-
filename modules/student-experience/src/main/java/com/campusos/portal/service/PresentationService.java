@@ -78,7 +78,6 @@ public class PresentationService {
                 headline(spec, r, payload, rows),
                 steps(spec, r, rows),
                 studentAction(spec, r),
-                staffActions(spec, r),
                 artifacts(payload.artifacts()),
                 FMT.format(r.createdAt),
                 FMT.format(r.updatedAt),
@@ -150,21 +149,11 @@ public class PresentationService {
     private ActionButton studentAction(WorkflowSpec spec, Request r) {
         for (Transition t : spec.from(r.state)) {
             if (t.actor() == Actor.STUDENT) {
-                return new ActionButton(t.label(), t.event().name(), t.actor().name(),
+                return new ActionButton(t.label(), t.event().name(),
                         t.tone(), t.requiresNote(), t.inputLabel());
             }
         }
         return null;
-    }
-
-    private List<ActionButton> staffActions(WorkflowSpec spec, Request r) {
-        List<ActionButton> out = new ArrayList<>();
-        for (Transition t : spec.from(r.state)) {
-            if (t.actor() == Actor.SYSTEM || t.actor() == Actor.STUDENT) continue;
-            out.add(new ActionButton(t.label(), t.event().name(), t.actor().name(),
-                    t.tone(), t.requiresNote(), t.inputLabel()));
-        }
-        return out;
     }
 
     /**
