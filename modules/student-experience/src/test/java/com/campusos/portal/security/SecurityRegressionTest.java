@@ -227,6 +227,59 @@ class SecurityRegressionTest extends EngineTestBase {
 
     /* ---- FINDING 4: security response headers (CWE-693) ---- */
 
+    /**
+     * THE FILTER-ORDER FIX, PINNED ON EVERY REFUSAL SHAPE.
+     *
+     * SecurityHeaders runs at HIGHEST_PRECEDENCE, ahead of springSecurityFilterChain, because
+     * a refusal is written from INSIDE that chain and the rest of the chain is never called.
+     * The regression that motivated it showed up as a 302, but the app refuses in three
+     * distinct ways and a fix that only covered one of them would be worth very little:
+     *
+     *   302  anonymous            -> the login redirect, written by the entry point
+     *   403  wrong authority      -> the access-denied handler, still inside the chain
+     *   403  wrong scope          -> ScopeAccessException, thrown past the chain into
+     *                               GlobalErrors and rendered by the DispatcherServlet
+     *
+     * The third travels a different path from the first two, so it is asserted separately
+     * rather than assumed to follow.
+     */
+    @Test
+    @DisplayName("security headers survive every shape of refusal, not just the redirect")
+    void securityHeadersOnEveryRefusalShape() throws Exception {
+        MvcResult redirect = mvc.perform(get("/")).andReturn();
+        assertThat(redirect.getResponse().getStatus()).as("anonymous is redirected").isEqualTo(302);
+        assertHeaders(redirect, "302 redirect to login");
+
+        MvcResult studentOnStaffRoute = mvc.perform(get("/faculty/tasks").with(as(HARI))).andReturn();
+        assertThat(studentOnStaffRoute.getResponse().getStatus())
+                .as("a student on a staff route is forbidden").isEqualTo(403);
+        assertHeaders(studentOnStaffRoute, "403 from the access-denied handler");
+
+        MvcResult staffOnStudentRoute = mvc.perform(
+                get("/requests").with(user(principal("anjali.menon")))).andReturn();
+        assertThat(staffOnStudentRoute.getResponse().getStatus()).isEqualTo(403);
+        assertHeaders(staffOnStudentRoute, "403 for staff on a student route");
+
+        // A cross-tenant staff read: refused by StaffAccessException inside a controller, so
+        // this 403 is rendered by the DispatcherServlet rather than by the security chain.
+        MvcResult scopeRefusal = mvc.perform(
+                get("/faculty/students/s_hari").with(user(principal("latha.iyer")))).andReturn();
+        assertThat(scopeRefusal.getResponse().getStatus()).isEqualTo(403);
+        assertHeaders(scopeRefusal, "403 from a scope refusal in a controller");
+    }
+
+    private static void assertHeaders(MvcResult res, String shape) {
+        assertThat(res.getResponse().getHeader("X-Content-Type-Options"))
+                .as("X-Content-Type-Options on a %s", shape).isEqualTo("nosniff");
+        assertThat(res.getResponse().getHeader("X-Frame-Options"))
+                .as("X-Frame-Options on a %s", shape).isEqualTo("DENY");
+        assertThat(res.getResponse().getHeader("Referrer-Policy"))
+                .as("Referrer-Policy on a %s", shape).isEqualTo("no-referrer");
+        assertThat(res.getResponse().getHeader("Content-Security-Policy"))
+                .as("CSP on a %s", shape)
+                .contains("frame-ancestors 'none'").contains("script-src 'none'");
+    }
+
     @Test
     @DisplayName("baseline security headers are set on every response, refusals included")
     void securityHeadersPresent() throws Exception {
