@@ -1,0 +1,22 @@
+<%
+/*
+  THE HELPER WIDGET. Not an AI assistant — a static, searchable topic list plus a link to
+  wherever the answer lives, matching what this file actually does. `helperAudience` ('student'
+  | 'staff') is set by the including header before this partial runs.
+
+  script-src is a per-request nonce now (see securityHeaders.js) specifically so this one file
+  can run; the topic data rides in as a same-origin JSON island, never as inline script.
+*/
+%>
+<div class="helper" id="helper">
+  <button type="button" id="helper-toggle" class="helper-toggle" aria-expanded="false" aria-controls="helper-panel">
+    <%= t('helper.button') %>
+  </button>
+  <div class="helper-panel" id="helper-panel" hidden>
+    <p class="helper-title"><%= t('helper.title') %></p>
+    <input type="text" id="helper-search" class="helper-search" placeholder="<%= t('helper.search') %>" autocomplete="off">
+    <ul class="helper-list" id="helper-list"></ul>
+  </div>
+  <script type="application/json" id="helper-topics"><%- helperTopicsJson(helperAudience) %></script>
+</div>
+<script nonce="<%= cspNonce %>" src="/js/helper.js"></script>

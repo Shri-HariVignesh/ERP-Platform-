@@ -57,6 +57,12 @@ computed from the session principal's roles (`StaffScopeResolver.actorFor`).
    session cookie defeats it same as any synchronizer-token scheme; it is not a defence against
    a fully compromised session, only against a forged cross-site request riding an otherwise
    valid one.
+5. **Client-side script surface.** `script-src` is a fresh nonce per response, not `'none'`
+   anymore — the Helper widget (`public/js/helper.js`) is the one script admitted, and only
+   because the response that renders it carries the matching nonce. Markup an attacker manages
+   to inject into a page still cannot execute a `<script>` of its own: they cannot predict this
+   request's nonce, and the file itself is static (not built from request/session data) and
+   makes no network calls, so there is no exfiltration path even if it were somehow substituted.
 
 ## Entry points
 
@@ -75,6 +81,7 @@ computed from the session principal's roles (`StaffScopeResolver.actorFor`).
 | `/faculty/*` (GET) | GET | `filter`, `q`, `clazz`, `subject`, `date` query params |
 | `/faculty/attendance`, `/faculty/marks` | POST | `clazz`, `subject`, `date`/`action`, per-student `status_*`/`internal_*`/`external_*` fields |
 | `/faculty/requests/:id/act` | POST | `id`, `event`, `note`, `back` |
+| `/lang/:locale` | GET | `locale` path param (allow-listed to `en`/`hi`), `back` query param (redirect target, allow-listed same as the `back` form field elsewhere) |
 
 Other input surfaces: the session cookie; `CAMPUSOS_BASE_URL` (operator-controlled, reaches the
 QR — never taken from the request, so a spoofed `Host` header cannot rewrite where a QR points);
