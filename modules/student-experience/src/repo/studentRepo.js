@@ -27,13 +27,14 @@ export const studentRepo = {
 
   save(s) {
     db.prepare(`INSERT INTO students (id, tenantId, rollNo, name, email, program, department, semester,
-        section, feeDues, active, leaveBalance, advisorName, hodName)
+        section, feeDues, active, leaveBalance, advisorName, hodName, antiRaggingAffidavitAt)
       VALUES (@id,@tenantId,@rollNo,@name,@email,@program,@department,@semester,@section,@feeDues,
-        @active,@leaveBalance,@advisorName,@hodName)
+        @active,@leaveBalance,@advisorName,@hodName,@antiRaggingAffidavitAt)
       ON CONFLICT(id) DO UPDATE SET rollNo=@rollNo, name=@name, email=@email, program=@program,
         department=@department, semester=@semester, section=@section, feeDues=@feeDues,
-        active=@active, leaveBalance=@leaveBalance, advisorName=@advisorName, hodName=@hodName`)
-      .run({ ...s, active: s.active ? 1 : 0 });
+        active=@active, leaveBalance=@leaveBalance, advisorName=@advisorName, hodName=@hodName,
+        antiRaggingAffidavitAt=@antiRaggingAffidavitAt`)
+      .run({ antiRaggingAffidavitAt: null, ...s, active: s.active ? 1 : 0 });
     return s;
   },
 };

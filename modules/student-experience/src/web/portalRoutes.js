@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { RequestType, DocType, LeaveType, GrievanceCategory } from '../domain/enums.js';
 import { RequestService } from '../service/RequestService.js';
 import { AcademicService } from '../service/AcademicService.js';
+import { ComplianceService } from '../service/ComplianceService.js';
 import { ScopeResolver } from '../service/ScopeResolver.js';
 import { documentRepo } from '../repo/documentRepo.js';
 import { IllegalTransitionException } from '../engine/IllegalTransitionException.js';
@@ -55,6 +56,14 @@ portalRoutes.get(['/', '/home'], requireStudent, (req, res) => {
   res.locals.openCount = all.filter((c) => c.isOpen()).length;
   res.locals.banner = all.find((c) => c.studentAction !== null) ?? all.find((c) => c.isOpen()) ?? null;
   res.render('home');
+});
+
+/** UGC Anti-Ragging Regulations, 2009: a yearly acknowledgment, not a Request workflow. */
+portalRoutes.post('/anti-ragging/ack', requireStudent, (req, res) => {
+  const s = ScopeResolver.current(req.session.principal);
+  ComplianceService.acknowledgeAntiRagging(s);
+  req.session.flash = 'Thank you — your anti-ragging acknowledgment is recorded for this year.';
+  redirectAfterSave(req, res, '/');
 });
 
 /* ----------------------------- 2. MY REQUESTS ----------------------------- */
