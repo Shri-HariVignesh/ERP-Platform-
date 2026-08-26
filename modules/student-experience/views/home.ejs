@@ -11,6 +11,19 @@
     <p class="sub"><%= student.program %> · Semester <%= student.semester %> · Section <%= student.section %> · <%= student.rollNo %></p>
   </section>
 
+  <% if (!student.antiRaggingAffidavitAt) { %>
+  <section class="banner">
+    <div>
+      <span class="kind"><%= t('antiRagging.title') %></span>
+      <p><%= t('antiRagging.body') %></p>
+    </div>
+    <form action="/anti-ragging/ack" method="post" class="act">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="btn action"><%= t('antiRagging.ack') %></button>
+    </form>
+  </section>
+  <% } %>
+
   <% if (banner) { %>
   <section class="banner">
     <div>

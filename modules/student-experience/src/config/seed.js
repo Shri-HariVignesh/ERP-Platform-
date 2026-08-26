@@ -33,9 +33,10 @@ function isWeekend(iso) {
   return d === 0 || d === 6;
 }
 
-function student(id, tenantId, rollNo, name, email, program, department, semester, section, feeDues, advisor, hod) {
+function student(id, tenantId, rollNo, name, email, program, department, semester, section, feeDues, advisor, hod, affidavitAck = true) {
   const s = { id, tenantId, rollNo, name, email, program, department, semester, section,
-    feeDues, active: true, leaveBalance: 12, advisorName: advisor, hodName: hod };
+    feeDues, active: true, leaveBalance: 12, advisorName: advisor, hodName: hod,
+    antiRaggingAffidavitAt: affidavitAck ? day(-200) : null };
   return studentRepo.save(s);
 }
 
@@ -225,7 +226,9 @@ function seedAceStaff(tenantId) {
 /** Seeds demo data by driving the REAL state machine — every seeded request has genuine history. */
 export function runSeed() {
   const snit = tenantRepo.save({ id: 't_snit', name: 'Sree Narayana Institute of Technology', shortName: 'SNIT', city: 'Kollam, Kerala', accent: '#3b6fd4' });
-  const hari = student('s_hari', snit.id, 'SNIT21CS042', 'Hari Prasad', 'hari.prasad@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 12500, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar');
+  // affidavitAck=false on purpose — Hari is the primary demo login, so the acknowledgment
+  // banner (and the route behind it) is actually reachable in the demo, not just in seed data.
+  const hari = student('s_hari', snit.id, 'SNIT21CS042', 'Hari Prasad', 'hari.prasad@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 12500, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar', false);
   account(snit.id, hari.id);
 
   const classDays = seedAttendance(snit.id, hari.id);

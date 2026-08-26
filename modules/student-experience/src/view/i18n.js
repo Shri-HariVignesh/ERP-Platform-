@@ -44,6 +44,10 @@ const STRINGS = {
     'helper.button': 'Helper',
     'helper.title': 'Need help?',
     'helper.search': 'Search help topics…',
+
+    'antiRagging.title': 'Anti-Ragging Affidavit — action needed',
+    'antiRagging.body': 'As required under the UGC Regulations on Curbing the Menace of Ragging, please acknowledge the anti-ragging affidavit for this academic year.',
+    'antiRagging.ack': 'I acknowledge',
   },
   hi: {
     'lang.en': 'EN',
@@ -84,6 +88,10 @@ const STRINGS = {
     'helper.button': 'सहायक',
     'helper.title': 'मदद चाहिए?',
     'helper.search': 'मदद विषय खोजें…',
+
+    'antiRagging.title': 'रैगिंग-विरोधी शपथ-पत्र — कार्रवाई आवश्यक',
+    'antiRagging.body': 'रैगिंग की रोकथाम संबंधी UGC विनियमों के अनुसार, कृपया इस शैक्षणिक वर्ष के लिए रैगिंग-विरोधी शपथ-पत्र स्वीकार करें।',
+    'antiRagging.ack': 'मैं स्वीकार करता/करती हूं',
   },
 };
 

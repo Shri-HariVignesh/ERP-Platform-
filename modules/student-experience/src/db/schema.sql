@@ -23,7 +23,10 @@ CREATE TABLE students (
   active INTEGER NOT NULL DEFAULT 1,
   leaveBalance INTEGER NOT NULL DEFAULT 12,
   advisorName TEXT,
-  hodName TEXT
+  hodName TEXT,
+  -- UGC Anti-Ragging Regulations, 2009: an annual acknowledgment, not a one-time signup step.
+  -- NULL means not yet acknowledged for the current cycle.
+  antiRaggingAffidavitAt TEXT
 );
 
 CREATE TABLE student_accounts (
