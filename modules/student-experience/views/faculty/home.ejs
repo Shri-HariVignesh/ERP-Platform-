@@ -11,18 +11,14 @@
     <p class="sub"><%= roleLabels.join(' · ') %><%= staff.department ? ' · ' + staff.department : ' · Institution-wide' %></p>
   </section>
 
-  <section class="stats">
-    <div><span>Pending actions</span><strong><%= pending %></strong></div>
-    <div><span>Students in scope</span><strong><%= roster %></strong></div>
-    <div><span>Classes taught</span><strong><%= classes.length %></strong></div>
-    <div><span>Roles</span><strong><%= roleLabels.length %></strong></div>
-  </section>
-
-  <section class="quick">
-    <a href="/faculty/tasks"><strong>My Tasks</strong><span>Everything waiting on you</span></a>
-    <a href="/faculty/students"><strong>Students</strong><span>Your students, read-only</span></a>
-    <% if (canAuthor) { %><a href="/faculty/attendance"><strong>Attendance</strong><span>Mark today's register</span></a><% } %>
-    <% if (canAuthor) { %><a href="/faculty/marks"><strong>Marks &amp; Results</strong><span>Draft, then finalize</span></a><% } %>
+  <section>
+    <div class="head"><h2>Key metrics</h2></div>
+    <div class="stats">
+      <div><span>Pending actions</span><strong><%= pending %></strong></div>
+      <div><span>Students in scope</span><strong><%= roster %></strong></div>
+      <div><span>Classes taught</span><strong><%= classes.length %></strong></div>
+      <div><span>Roles</span><strong><%= roleLabels.length %></strong></div>
+    </div>
   </section>
 
   <section>
@@ -31,6 +27,16 @@
       <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: '/faculty' }) %><% }) %>
     </div>
     <% if (tasks.length === 0) { %><p class="empty">Nothing is waiting on you right now.</p><% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Quick actions</h2></div>
+    <div class="quick">
+      <a href="/faculty/tasks"><strong>My Tasks</strong><span>Everything waiting on you</span></a>
+      <a href="/faculty/students"><strong>Students</strong><span>Your students, read-only</span></a>
+      <% if (canAuthor) { %><a href="/faculty/attendance"><strong>Attendance</strong><span>Mark today's register</span></a><% } %>
+      <% if (canAuthor) { %><a href="/faculty/marks"><strong>Marks &amp; Results</strong><span>Draft, then finalize</span></a><% } %>
+    </div>
   </section>
 
   <section>

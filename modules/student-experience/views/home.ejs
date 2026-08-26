@@ -36,18 +36,24 @@
   <p class="banner calm">Nothing is waiting on you. Every request is closed.</p>
   <% } %>
 
-  <section class="quick">
-    <a href="/leave"><strong>Apply Leave</strong><span>Auto-validated, then routed</span></a>
-    <a href="/documents"><strong>Request Document</strong><span>Bonafide issues instantly</span></a>
-    <a href="/internship"><strong>Submit Internship</strong><span>Verified, then on your record</span></a>
-    <a href="/grievance"><strong>Raise Grievance</strong><span>Auto-assigned to a desk</span></a>
+  <section>
+    <div class="head"><h2>Key metrics</h2></div>
+    <div class="stats">
+      <div><span>Attendance</span><strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong></div>
+      <div><span>Open requests</span><strong><%= openCount %></strong></div>
+      <div><span>Leave balance</span><strong><%= student.leaveBalance %> days</strong></div>
+      <div><span>Fee dues</span><strong>₹<%= student.feeDues %></strong></div>
+    </div>
   </section>
 
-  <section class="stats">
-    <div><span>Attendance</span><strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong></div>
-    <div><span>Open requests</span><strong><%= openCount %></strong></div>
-    <div><span>Leave balance</span><strong><%= student.leaveBalance %> days</strong></div>
-    <div><span>Fee dues</span><strong>₹<%= student.feeDues %></strong></div>
+  <section>
+    <div class="head"><h2>Quick actions</h2></div>
+    <div class="quick">
+      <a href="/leave"><strong>Apply Leave</strong><span>Auto-validated, then routed</span></a>
+      <a href="/documents"><strong>Request Document</strong><span>Bonafide issues instantly</span></a>
+      <a href="/internship"><strong>Submit Internship</strong><span>Verified, then on your record</span></a>
+      <a href="/grievance"><strong>Raise Grievance</strong><span>Auto-assigned to a desk</span></a>
+    </div>
   </section>
 
   <section>
