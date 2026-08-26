@@ -24,13 +24,13 @@ a{color:var(--accent)}
    every control below without repeating it per-selector.
 
    The plain `a:hover{underline}` rule that would normally sit here is deliberately left out:
-   it would tie in specificity with .tabs/.filters/.brand/.quick's own `text-decoration:none`
+   it would tie in specificity with .sidenav/.filters/.brand/.quick's own `text-decoration:none`
    (same 0,1,1 weight), so which one wins would depend on file order rather than intent. Inline
    prose links (artifacts, verify IDs, "See all →", table row links) are the ones actually
    missing feedback, so they get it explicitly below instead of a rule that has to out-cascade
    four unrelated components to work. */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-a,button,.btn,input,select,textarea,summary,.tabs a,.filters a,.filters button,.tbl tbody tr{
+a,button,.btn,input,select,textarea,summary,.sidenav a,.filters a,.filters button,.tbl tbody tr{
   transition:background-color .12s ease,border-color .12s ease,color .12s ease,opacity .12s ease}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 .wrap.narrow{max-width:560px}
@@ -40,24 +40,54 @@ h3{font-size:14.5px;margin:2px 0 2px;font-weight:600}
 .sub{color:var(--muted);margin:0;max-width:62ch}
 .muted{color:var(--muted)}
 
-/* ---- chrome ---- */
+/* ---- chrome: persistent sidebar + slim top bar ----
+   The sidebar is `position:fixed` and sits outside normal flow on purpose: every page template
+   ends with a plain `</main></body></html>` (16 of them), so a flex/grid wrapper around
+   sidebar+content would need a matching wrapper close added to every one of those files. A
+   fixed-position sidebar plus `body{padding-left}` needs no wrapper at all — header.ejs/
+   faculty/header.ejs are the only files this layout touches. */
+:root{ --sidebar-w:222px }
+body{padding-left:var(--sidebar-w)}
+body.plain,body.loginpage{padding-left:0}
+
+.navtoggle{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.navbtn{display:none}
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);z-index:20;
+  background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;overflow-y:auto;transition:transform .18s ease}
+.sidebar .brand{display:flex;gap:9px;align-items:center;text-decoration:none;color:inherit;
+  padding:15px 16px;border-bottom:1px solid var(--line)}
+.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:3px;flex:none;
+  background:var(--accent);color:#fff;font-weight:700;font-size:11px;letter-spacing:.03em}
+.sidebar .brand strong{display:block;font-size:13px}
+.sidebar .brand small{display:block;color:var(--muted);font-size:11.5px}
+
+.sidenav{display:flex;flex-direction:column;padding:8px;gap:1px}
+.sidenav a{display:block;padding:8px 11px;border-radius:3px;text-decoration:none;
+  color:var(--muted);font-size:13px;border-left:3px solid transparent;white-space:nowrap}
+.sidenav a.on{background:var(--bg);color:var(--ink);font-weight:600;border-left-color:var(--accent)}
+.sidenav a:not(.on):hover{background:var(--bg);color:var(--ink)}
+.sidenav .pill{float:right;margin-top:1px}
+
 .topbar{background:var(--panel);border-bottom:1px solid var(--line);margin-bottom:24px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:11px;padding-bottom:10px}
-.brand{display:flex;gap:9px;align-items:center;text-decoration:none;color:inherit}
-.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:3px;
-  background:var(--accent);color:#fff;font-weight:700;font-size:11px;letter-spacing:.03em}
-.brand strong{display:block;font-size:13px}
-.brand small{display:block;color:var(--muted);font-size:11.5px}
+.workspace{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .switcher{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-shrink:0}
 .switcher select{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:3px;
   background:var(--bg);color:var(--ink);max-width:280px}
-.tabs{display:flex;gap:2px;overflow-x:auto;border-top:1px solid var(--line)}
-.tabs a{padding:8px 12px;text-decoration:none;color:var(--muted);font-size:12.5px;letter-spacing:.01em;
-  border-bottom:2px solid transparent;white-space:nowrap}
-.tabs a.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600;background:var(--bg)}
-.tabs a:not(.on):hover{color:var(--ink);background:var(--bg)}
 
 main.wrap{padding-bottom:64px}
+
+@media (max-width:860px){
+  body{padding-left:0}
+  .navbtn{display:grid;place-items:center;position:fixed;top:10px;left:10px;z-index:21;
+    width:34px;height:34px;border-radius:3px;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);font-size:15px;cursor:pointer}
+  .sidebar{transform:translateX(-100%);box-shadow:0 0 0 2000px rgba(0,0,0,0);}
+  .navtoggle:checked ~ .sidebar{transform:translateX(0);box-shadow:0 0 0 2000px rgba(0,0,0,.35)}
+  .bar{padding-left:46px}
+}
 section{margin-bottom:22px}
 .hero{margin-bottom:20px}
 .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
@@ -265,10 +295,9 @@ textarea{resize:vertical}
 
 /* ============================ staff (faculty) surface ============================ */
 
-.topbar.staff .mark { background: #1f3d63; }
-.tabs .staff-link { margin-left: auto; opacity: .7; }
-.tabs .pill {
-  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 3px;
+.sidebar.staff .mark { background: #1f3d63; }
+.sidenav .pill {
+  display: inline-block; padding: 0 6px; border-radius: 3px;
   background: #d4453b; color: #fff; font-size: 10.5px; line-height: 16px; font-weight: 700;
 }
 
@@ -314,16 +343,10 @@ textarea{resize:vertical}
 
 /* ---- narrow viewports ----
    .switcher no longer shrinks (a wrapped "Sign out" button reads as broken), so on a phone
-   width the brand (institute name, which can run to three lines) and the switcher need their
-   own rows instead of being squeezed onto one — .bar wrapping is cheap and never clips text. */
+   width the workspace label and the switcher need their own rows instead of being squeezed
+   onto one — .bar wrapping is cheap and never clips text. The sidebar itself is handled by
+   the 860px breakpoint above (off-canvas, toggled by the checkbox hack). */
 @media (max-width: 480px) {
   .bar { flex-wrap: wrap; row-gap: 10px; }
-  /* The tab row scrolls horizontally here (7 student tabs don't fit at 375px) with nothing
-     to signal that — a hard-cut label at the edge reads as truncated text, not "scroll me".
-     A trailing fade is the standard hint and costs nothing when there's nothing to hide. */
-  .tabs {
-    -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-    mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-  }
 }
 .record .when { color: var(--muted); font-size: 11.5px; }

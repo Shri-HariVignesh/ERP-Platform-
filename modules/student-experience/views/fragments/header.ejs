@@ -1,25 +1,32 @@
-<header class="topbar">
-  <div class="wrap bar">
-    <a class="brand" href="/">
-      <span class="mark"><%= tenant.shortName %></span>
-      <span>
-        <strong><%= tenant.name %></strong>
-        <small><%= tenant.city %></small>
-      </span>
-    </a>
-    <form class="switcher" action="/logout" method="post">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <label><%= student.name %> · <%= student.rollNo %></label>
-      <button class="btn ghost" type="submit">Sign out</button>
-    </form>
-  </div>
-  <nav class="wrap tabs">
-    <a href="/" class="<%= nav === 'home' ? 'on' : '' %>">Home</a>
+<input type="checkbox" id="navtoggle" class="navtoggle" aria-hidden="true">
+<label for="navtoggle" class="navbtn" aria-label="Toggle navigation">☰</label>
+
+<nav class="sidebar">
+  <a class="brand" href="/">
+    <span class="mark"><%= tenant.shortName %></span>
+    <span>
+      <strong><%= tenant.name %></strong>
+      <small><%= tenant.city %></small>
+    </span>
+  </a>
+  <div class="sidenav">
+    <a href="/" class="<%= nav === 'home' ? 'on' : '' %>">Dashboard</a>
     <a href="/requests" class="<%= nav === 'requests' ? 'on' : '' %>">My Requests</a>
     <a href="/leave" class="<%= nav === 'leave' ? 'on' : '' %>">Leave</a>
     <a href="/internship" class="<%= nav === 'internship' ? 'on' : '' %>">Internship</a>
     <a href="/documents" class="<%= nav === 'documents' ? 'on' : '' %>">Documents</a>
     <a href="/academic" class="<%= nav === 'academic' ? 'on' : '' %>">Academic</a>
     <a href="/grievance" class="<%= nav === 'grievance' ? 'on' : '' %>">Grievance</a>
-  </nav>
+  </div>
+</nav>
+
+<header class="topbar">
+  <div class="wrap bar">
+    <span class="workspace">Student Workspace</span>
+    <form class="switcher" action="/logout" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label><%= student.name %> · <%= student.rollNo %></label>
+      <button class="btn ghost" type="submit">Sign out</button>
+    </form>
+  </div>
 </header>
