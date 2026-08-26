@@ -12,8 +12,10 @@ import { portalRoutes } from './web/portalRoutes.js';
 import { actionsRoutes } from './web/actionsRoutes.js';
 import { verifyRoutes } from './web/verifyRoutes.js';
 import { facultyRoutes } from './web/facultyRoutes.js';
+import { langRoutes, readLocaleCookie } from './web/langRoutes.js';
 import { DisplayLabels } from './view/DisplayLabels.js';
 import { DocType } from './domain/enums.js';
+import { I18n } from './view/i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
@@ -52,11 +54,22 @@ app.use(session({
 app.use(csrfToken);
 app.use(csrfProtect);
 
+// Locale lives in its own cookie (langRoutes.js), not the session — see the comment there for
+// why: session.regenerate()/destroy() at login/logout would otherwise silently reset it.
+app.use((req, res, next) => {
+  const locale = readLocaleCookie(req) === 'hi' ? 'hi' : 'en';
+  res.locals.locale = locale;
+  res.locals.t = (key) => I18n.t(locale, key);
+  res.locals.currentPath = req.originalUrl;
+  next();
+});
+
 app.use(loginRoutes);
 app.use(portalRoutes);
 app.use('/actions', actionsRoutes);
 app.use('/verify', verifyRoutes);
 app.use('/faculty', facultyRoutes);
+app.use(langRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
