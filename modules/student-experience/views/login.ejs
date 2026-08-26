@@ -8,19 +8,23 @@
 </head>
 <body class="loginpage">
 <main class="loginbox">
-  <h1>CampusOS</h1>
-  <p class="sub">One sign-in for students and staff</p>
+  <nav class="langswitch loginlang" aria-label="Language">
+    <a href="/lang/en?back=%2Flogin" class="<%= locale === 'en' ? 'on' : '' %>"><%= t('lang.en') %></a>
+    <a href="/lang/hi?back=%2Flogin" class="<%= locale === 'hi' ? 'on' : '' %>"><%= t('lang.hi') %></a>
+  </nav>
+  <h1><%= t('login.title') %></h1>
+  <p class="sub"><%= t('login.subtitle') %></p>
 
   <% if (typeof error !== 'undefined' && error) { %><p class="flash bad"><%= error %></p><% } %>
   <% if (typeof flash !== 'undefined' && flash) { %><p class="flash ok"><%= flash %></p><% } %>
 
   <form action="/login" method="post">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <label for="u">Username</label>
+    <label for="u"><%= t('login.username') %></label>
     <input id="u" name="username" type="text" autocomplete="username" required autofocus>
-    <label for="p">Password</label>
+    <label for="p"><%= t('login.password') %></label>
     <input id="p" name="password" type="password" autocomplete="current-password" required>
-    <button class="btn success" type="submit">Sign in</button>
+    <button class="btn success" type="submit"><%= t('action.signIn') %></button>
   </form>
 
   <details class="trail demo">

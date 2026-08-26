@@ -17,7 +17,8 @@ loginRoutes.post('/login', (req, res) => {
   if (!principal) return res.redirect('/login?error');
 
   // SECURITY: a new session id at login, so a pre-set cookie cannot be ridden into an
-  // authenticated session (session-fixation defence).
+  // authenticated session (session-fixation defence). Locale lives in its own cookie
+  // (see langRoutes.js), not on the session, specifically so this regenerate can't touch it.
   req.session.regenerate((err) => {
     if (err) return res.redirect('/login?error');
     req.session.principal = principal;

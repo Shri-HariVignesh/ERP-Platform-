@@ -14,7 +14,7 @@
   <% if (banner) { %>
   <section class="banner">
     <div>
-      <span class="kind">Needs your attention</span>
+      <span class="kind"><%= t('section.needsAttention') %></span>
       <h3><%= banner.title %></h3>
       <p><%= banner.headline %></p>
     </div>
@@ -37,7 +37,7 @@
   <% } %>
 
   <section>
-    <div class="head"><h2>Key metrics</h2></div>
+    <div class="head"><h2><%= t('section.keyMetrics') %></h2></div>
     <div class="stats">
       <div><span>Attendance</span><strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong></div>
       <div><span>Open requests</span><strong><%= openCount %></strong></div>
@@ -47,7 +47,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Quick actions</h2></div>
+    <div class="head"><h2><%= t('section.quickActions') %></h2></div>
     <div class="quick">
       <a href="/leave"><strong>Apply Leave</strong><span>Auto-validated, then routed</span></a>
       <a href="/documents"><strong>Request Document</strong><span>Bonafide issues instantly</span></a>
@@ -57,7 +57,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Recent requests</h2><a href="/requests">See all →</a></div>
+    <div class="head"><h2><%= t('section.recentRequests') %></h2><a href="/requests"><%= t('action.seeAll') %> →</a></div>
     <div class="cards">
       <% recent.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/' }) %><% }) %>
     </div>

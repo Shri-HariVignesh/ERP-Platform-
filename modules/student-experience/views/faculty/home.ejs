@@ -12,7 +12,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Key metrics</h2></div>
+    <div class="head"><h2><%= t('section.keyMetrics') %></h2></div>
     <div class="stats">
       <div><span>Pending actions</span><strong><%= pending %></strong></div>
       <div><span>Students in scope</span><strong><%= roster %></strong></div>
@@ -22,7 +22,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Waiting on you</h2><a href="/faculty/tasks">See all →</a></div>
+    <div class="head"><h2><%= t('section.waitingOnYou') %></h2><a href="/faculty/tasks"><%= t('action.seeAll') %> →</a></div>
     <div class="cards">
       <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: '/faculty' }) %><% }) %>
     </div>
@@ -30,7 +30,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Quick actions</h2></div>
+    <div class="head"><h2><%= t('section.quickActions') %></h2></div>
     <div class="quick">
       <a href="/faculty/tasks"><strong>My Tasks</strong><span>Everything waiting on you</span></a>
       <a href="/faculty/students"><strong>Students</strong><span>Your students, read-only</span></a>
@@ -40,7 +40,7 @@
   </section>
 
   <section>
-    <div class="head"><h2>Recent activity</h2><a href="/faculty/notifications">All notifications →</a></div>
+    <div class="head"><h2><%= t('section.recentActivity') %></h2><a href="/faculty/notifications"><%= t('action.allNotifications') %> →</a></div>
     <ul class="record">
       <% recent.forEach(function(n) { %>
       <li>
