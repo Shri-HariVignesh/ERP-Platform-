@@ -16,6 +16,7 @@ import { langRoutes, readLocaleCookie } from './web/langRoutes.js';
 import { DisplayLabels } from './view/DisplayLabels.js';
 import { DocType } from './domain/enums.js';
 import { I18n } from './view/i18n.js';
+import { GrievanceVisibility } from './service/GrievanceVisibility.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
@@ -33,6 +34,7 @@ app.disable('x-powered-by');
 // EJS equivalent of Thymeleaf's `T(...)` static-method access to DisplayLabels/DocType.
 app.locals.DisplayLabels = DisplayLabels;
 app.locals.DocType = DocType;
+app.locals.GrievanceVisibility = GrievanceVisibility;
 
 // SecurityHeaders.java runs at HIGHEST_PRECEDENCE, before anything that might short-circuit
 // the chain — headers must land on every response, including denials and redirects.

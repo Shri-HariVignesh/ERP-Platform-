@@ -108,6 +108,24 @@ Payload: `category, subject, description, anonymous`. The desk a grievance is sh
 (`DisplayLabels.desk(category)`) is a *display* mapping, not routing — `AUTO_ASSIGN` declares no
 side effects, so nothing in the engine actually dispatches to a named desk.
 
+**Confidential categories.** Five categories — `RAGGING`, `SEXUAL_HARASSMENT`,
+`SC_ST_DISCRIMINATION`, `EQUAL_OPPORTUNITY`, `RTI` — exist because UGC regulations (Anti-Ragging
+2009, POSH 2013, Grievance Redressal 2023) require them to be seen ONLY by their statutory
+committee, never by an ordinary class advisor who happens to share a roster with the
+complainant. Unlike the desk label above, this restriction IS enforced — at the service layer,
+by [`GrievanceVisibility.js`](../src/service/GrievanceVisibility.js) — in `FacultyService.inbox`,
+`.requestsOf`, `.notifications` and `.act`. A committee role (`ICC`, `ANTI_RAGGING`, `SC_ST_CELL`,
+`EQUAL_OPPORTUNITY_CELL`, `RTI_OFFICER`) resolves the SAME `Actor.FACULTY` edges above — the
+matrix does not grow a new actor for this — but `StaffScopeResolver.grievanceRoster()` gives it
+institution-wide GRIEVANCE-only reach, deliberately kept out of `roster()`/`canSee()` so holding
+a committee seat is never a side door into a student's attendance, marks or other requests.
+
+**Appeal.** `RESOLVED` is not the end of the line: the student may `ESCALATE` (note required —
+the appeal reason) to `OMBUDSMAN_REVIEW`, where `Actor.OMBUDSPERSON` — a genuinely different
+matrix actor, held only by `StaffRole.OMBUDSPERSON` — `DECIDE`s (note required) to the terminal
+`OMBUDSMAN_DECIDED`, per the two-tier committee-then-ombudsperson structure the 2023 regulations
+describe.
+
 ## 5. Normalized read model (one call feeds Home AND My Requests AND the faculty inbox)
 
 ```

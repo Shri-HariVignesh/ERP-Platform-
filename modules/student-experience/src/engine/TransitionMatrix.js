@@ -2,9 +2,9 @@ import { Actor, Event, RequestState, RequestType, SideEffect, DocType } from '..
 import { Transition } from './Transition.js';
 import { WorkflowSpec } from './WorkflowSpec.js';
 
-const { SYSTEM, FACULTY, HOD, STUDENT, INSTITUTION, OFFICE } = Actor;
+const { SYSTEM, FACULTY, HOD, STUDENT, INSTITUTION, OFFICE, OMBUDSPERSON } = Actor;
 const { AUTO_VALIDATE, APPROVE, REJECT, APPLY, AUTO_CHECK, VERIFY, RETURN, RESUBMIT, WRITE_RECORD,
-  AUTO_ELIGIBILITY, AUTO_ASSIGN, START_REVIEW, RESOLVE } = Event;
+  AUTO_ELIGIBILITY, AUTO_ASSIGN, START_REVIEW, RESOLVE, ESCALATE, DECIDE } = Event;
 const S = RequestState;
 const FX = SideEffect;
 
@@ -144,6 +144,12 @@ const DOCUMENT = new WorkflowSpec(
 
 /* ----------------------------- GRIEVANCE ----------------------------- */
 
+/**
+ * The appeal tier (RESOLVED -> OMBUDSMAN_REVIEW -> OMBUDSMAN_DECIDED) is what the UGC
+ * (Redressal of Grievances of Students) Regulations, 2023 actually add on top of a plain
+ * committee-resolves-it flow: a two-tier structure where an unsatisfied student can escalate to
+ * a genuinely different, more senior actor rather than the same desk having the last word.
+ */
 const GRIEVANCE = new WorkflowSpec(
   'Grievance',
   S.SUBMITTED,
@@ -152,18 +158,27 @@ const GRIEVANCE = new WorkflowSpec(
     { key: S.ASSIGNED, label: 'Assigned' },
     { key: S.UNDER_REVIEW, label: 'Under review' },
     { key: S.RESOLVED, label: 'Resolved' },
+    { key: S.OMBUDSMAN_REVIEW, label: 'Ombudsperson review' },
+    { key: S.OMBUDSMAN_DECIDED, label: 'Ombudsperson decision' },
   ],
   {},
-  { [S.RESOLVED]: 'success' },
+  { [S.RESOLVED]: 'success', [S.OMBUDSMAN_DECIDED]: 'success' },
   {
     [S.SUBMITTED]: 'Routing', [S.ASSIGNED]: 'Assigned to desk',
     [S.UNDER_REVIEW]: 'Under review', [S.RESOLVED]: 'Resolved',
+    [S.OMBUDSMAN_REVIEW]: 'With the Ombudsperson', [S.OMBUDSMAN_DECIDED]: 'Ombudsperson decided',
   },
   {
     [S.SUBMITTED]: [Transition.of(AUTO_ASSIGN, SYSTEM, S.ASSIGNED, [])],
     [S.ASSIGNED]: [Transition.human(START_REVIEW, FACULTY, S.UNDER_REVIEW, [], false, 'Desk starts review', 'pending')],
     [S.UNDER_REVIEW]: [Transition.human(RESOLVE, FACULTY, S.RESOLVED, [FX.NOTIFY], true, 'Desk resolves', 'success')],
-    [S.RESOLVED]: [],
+    [S.RESOLVED]: [
+      Transition.human(ESCALATE, STUDENT, S.OMBUDSMAN_REVIEW, [], true, 'Escalate to Ombudsperson', 'pending'),
+    ],
+    [S.OMBUDSMAN_REVIEW]: [
+      Transition.human(DECIDE, OMBUDSPERSON, S.OMBUDSMAN_DECIDED, [FX.NOTIFY], true, 'Ombudsperson decides', 'success'),
+    ],
+    [S.OMBUDSMAN_DECIDED]: [],
   },
 );
 

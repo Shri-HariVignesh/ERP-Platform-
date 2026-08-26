@@ -8,7 +8,13 @@
 %>
 <article class="task">
   <div class="who-for">
+    <% /* A statutory committee's institution-wide grievance reach is not a grant to browse
+          this student's full profile — canOpenProfile mirrors that same canSee() boundary. */ %>
+    <% if (t.canOpenProfile) { %>
     <a href="/faculty/students/<%= t.studentId %>"><%= t.studentName %></a>
+    <% } else { %>
+    <strong><%= t.studentName %></strong>
+    <% } %>
     <span><%= t.rollNo %> · <%= t.className %></span>
   </div>
 

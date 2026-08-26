@@ -23,6 +23,8 @@ const STATES = {
   [RequestState.ASSIGNED]: 'Assigned to a desk',
   [RequestState.UNDER_REVIEW]: 'Under review',
   [RequestState.RESOLVED]: 'Resolved',
+  [RequestState.OMBUDSMAN_REVIEW]: 'With the Ombudsperson',
+  [RequestState.OMBUDSMAN_DECIDED]: 'Ombudsperson decided',
 };
 
 const EFFECTS = {
@@ -50,11 +52,18 @@ const CATEGORIES = {
   [GrievanceCategory.FEES]: 'Fees',
   [GrievanceCategory.HOSTEL]: 'Hostel',
   [GrievanceCategory.OTHER]: 'Other',
+  [GrievanceCategory.RAGGING]: 'Ragging',
+  [GrievanceCategory.SEXUAL_HARASSMENT]: 'Sexual harassment (confidential)',
+  [GrievanceCategory.SC_ST_DISCRIMINATION]: 'SC/ST discrimination',
+  [GrievanceCategory.EQUAL_OPPORTUNITY]: 'Equal opportunity',
+  [GrievanceCategory.RTI]: 'Right to Information (RTI)',
 };
 
 /**
- * Which desk a grievance category belongs to. This is a DISPLAY MAPPING, not routing:
- * AUTO_ASSIGN carries no side effects, so nothing in the engine actually dispatches to a desk.
+ * Which desk a grievance category belongs to. For the ordinary categories this is a DISPLAY
+ * MAPPING only, same as ever: AUTO_ASSIGN carries no side effects, nothing in the engine
+ * dispatches to a desk. For the five UGC-mandated categories below the desk name is backed by
+ * a REAL restriction — see GrievanceVisibility.js — so the label and the enforcement agree.
  */
 const DESKS = {
   [GrievanceCategory.ACADEMIC]: 'Academic Office',
@@ -62,6 +71,11 @@ const DESKS = {
   [GrievanceCategory.FEES]: 'Accounts Office',
   [GrievanceCategory.HOSTEL]: 'Hostel Warden Office',
   [GrievanceCategory.OTHER]: 'Student Services',
+  [GrievanceCategory.RAGGING]: 'Anti-Ragging Committee',
+  [GrievanceCategory.SEXUAL_HARASSMENT]: 'Internal Complaints Committee (ICC)',
+  [GrievanceCategory.SC_ST_DISCRIMINATION]: 'SC/ST Cell',
+  [GrievanceCategory.EQUAL_OPPORTUNITY]: 'Equal Opportunity Cell',
+  [GrievanceCategory.RTI]: 'RTI Cell',
 };
 const DEFAULT_DESK = 'Student Services';
 
@@ -165,6 +179,8 @@ const STATUS = {
   [RequestState.RETURNED]: 'Returned — see the reason below.',
   [RequestState.REJECTED]: 'Rejected — see the reason below.',
   [RequestState.RESOLVED]: 'Resolved.',
+  [RequestState.OMBUDSMAN_REVIEW]: 'Escalated — with the Ombudsperson.',
+  [RequestState.OMBUDSMAN_DECIDED]: 'Ombudsperson decision issued — see the note below.',
 };
 
 const STRIP = [
