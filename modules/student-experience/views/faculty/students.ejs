@@ -18,8 +18,25 @@
     <button type="submit" class="btn ghost">Search</button>
   </form>
 
+  <%
+    // Every column-header / pagination link carries q forward but resets page to 1 on a
+    // sort change — the alternative (keeping a stale page number against a re-sorted list)
+    // silently shows the wrong rows rather than an honest page 1.
+    function sortHref(field) {
+      const nextDir = (sort === field && dir === 'asc') ? 'desc' : 'asc';
+      return `/faculty/students?q=${encodeURIComponent(q)}&sort=${field}&dir=${nextDir}`;
+    }
+    function pageHref(p) {
+      return `/faculty/students?q=${encodeURIComponent(q)}&sort=${sort}&dir=${dir}&page=${p}`;
+    }
+  %>
+
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Roll no</th><th>Name</th><th>Programme</th><th>Class</th><th></th></tr></thead>
+    <thead><tr>
+      <th><a class="sort <%= sort === 'rollNo' ? 'on' : '' %>" href="<%= sortHref('rollNo') %>">Roll no<%= sort === 'rollNo' ? (dir === 'asc' ? ' ↑' : ' ↓') : '' %></a></th>
+      <th><a class="sort <%= sort === 'name' ? 'on' : '' %>" href="<%= sortHref('name') %>">Name<%= sort === 'name' ? (dir === 'asc' ? ' ↑' : ' ↓') : '' %></a></th>
+      <th>Programme</th><th>Class</th><th></th>
+    </tr></thead>
     <tbody>
       <% roster.forEach(function(s) { %>
       <tr>
@@ -31,6 +48,17 @@
     </tbody>
   </table></div>
   <% if (roster.length === 0) { %><p class="empty">No student matches that search inside your scope.</p><% } %>
+
+  <% if (total > 0) { %>
+  <div class="pagination">
+    <span class="range"><%= rangeStart %>–<%= rangeEnd %> of <%= total %></span>
+    <span class="pages">
+      <% if (page > 1) { %><a class="btn ghost" href="<%= pageHref(page - 1) %>">← Prev</a><% } else { %><span class="btn ghost" aria-disabled="true">← Prev</span><% } %>
+      <span class="pageno">Page <%= page %> of <%= totalPages %></span>
+      <% if (page < totalPages) { %><a class="btn ghost" href="<%= pageHref(page + 1) %>">Next →</a><% } else { %><span class="btn ghost" aria-disabled="true">Next →</span><% } %>
+    </span>
+  </div>
+  <% } %>
 </main>
 </body>
 </html>
