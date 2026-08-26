@@ -12,50 +12,52 @@ ERP-Platform-/
 │   ├── ARCHITECTURE.md         module boundaries, tenancy, the shared rules
 │   └── MODULES.md              the module map — what exists, what is planned
 └── modules/
-    └── student-experience/     first module (built) — Spring Boot, Maven root
+    └── student-experience/     first module (built) — Node.js / Express
         ├── README.md
-        ├── pom.xml
+        ├── package.json
         ├── docs/
         │   ├── STATE_CONTRACT.md
-        │   └── REPOSITORY_SCOPE_RULES.md
-        └── src/
-            ├── main/java/com/campusos/portal/
-            │   ├── engine/     the guarded state machine + transition matrix
-            │   ├── domain/     one Request table, typed enums
-            │   ├── payload/    per-type payload DTOs + codec
-            │   ├── repo/       scoped repositories (no JpaRepository)
-            │   ├── service/    scope resolution, academic writes, QR
-            │   ├── view/       the normalized card / timeline read model
-            │   ├── web/        controllers incl. the demo hook and /verify
-            │   └── config/     demo seeder, security headers
-            ├── main/resources/ Thymeleaf templates + css
-            └── test/java/      74 tests: guards, side effects, scoping, security
+        │   ├── REPOSITORY_SCOPE_RULES.md
+        │   ├── SECURITY.md
+        │   └── THREAT_MODEL.md
+        ├── src/
+        │   ├── engine/     the guarded state machine + transition matrix
+        │   ├── domain/     the Request shape, typed enums
+        │   ├── payload/    per-type payload classes + codec
+        │   ├── repo/       scoped query modules (no unscoped finder exists)
+        │   ├── service/    scope resolution, academic writes, QR
+        │   ├── view/       the normalized card / timeline read model
+        │   ├── web/        routes incl. the faculty portal and /verify
+        │   ├── config/     demo seeder
+        │   └── db/         schema + connection
+        ├── views/          EJS templates + static css
+        └── test/           engine, scoping, and view-helper tests
 ```
 
 ## Build
 
-Each module builds independently; there is no aggregator POM yet.
+Each module builds independently; there is no aggregator build yet.
 
 ```bash
-cd modules/student-experience && mvn spring-boot:run   # http://localhost:8080
-cd modules/student-experience && mvn test              # 74 tests
+cd modules/student-experience && npm install
+cd modules/student-experience && npm start   # http://localhost:8080
+cd modules/student-experience && npm test
 ```
 
 ## Modules
 
 | Module | Status | What it owns |
 |---|---|---|
-| `student-experience` | built | The seven student-facing views: Home, My Requests, Leave, Internship, Documents & Certificates, Academic, Grievance — all on one polymorphic request engine. |
-| `student-experience-js` | built | A JavaScript port of `student-experience` (Node/Express/EJS/better-sqlite3 in place of Spring Boot/Thymeleaf/H2). Same engine, same frozen contract, same views — no behaviour changed, added, or removed. |
+| `student-experience` | built | The seven student-facing views: Home, My Requests, Leave, Internship, Documents & Certificates, Academic, Grievance — plus an eight-view faculty portal — all on one polymorphic request engine. |
 
-Everything else — staff dashboards, admissions, finance, HR, hostel, library, placements — is
-unclaimed. See [`docs/MODULES.md`](docs/MODULES.md) before starting one.
+Everything else — admissions, finance, HR, hostel, library, placements — is unclaimed. See
+[`docs/MODULES.md`](docs/MODULES.md) before starting one.
 
 ## Non-negotiables
 
 Two rules hold across every module, not just the first:
 
-1. **Tenancy is not optional.** No query compiles without `tenant_id`. See
+1. **Tenancy is not optional.** No query compiles without `tenantId`. See
    [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 2. **One guarded transition per state change.** State moves through a declared matrix and nowhere
    else; side effects fire inside the transition's transaction.

@@ -14,12 +14,12 @@ A module is expected to carry, at minimum:
 
 ## Tenancy
 
-`tenant_id` is a required column on every domain table and a required argument on every query.
-The enforcement is structural, not conventional: repositories expose only methods that carry
-the scope, so an unscoped read is a compile error rather than a code-review catch. Exceptions
-exist but must be enumerated and test-asserted — see
+`tenantId` is a required column on every domain table and a required argument on every query.
+The enforcement is structural, not conventional: repositories expose only functions that carry
+the scope, so an unscoped read is impossible to call by accident rather than a code-review
+catch. Exceptions exist but must be enumerated and documented — see
 [`../modules/student-experience/docs/REPOSITORY_SCOPE_RULES.md`](../modules/student-experience/docs/REPOSITORY_SCOPE_RULES.md)
-for the pattern and the four justified exceptions in that module.
+for the pattern and the justified exceptions in that module.
 
 ## State changes
 

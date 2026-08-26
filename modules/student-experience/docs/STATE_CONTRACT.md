@@ -1,146 +1,127 @@
-# FROZEN STATE CONTRACT — Student Experience Portal (prototype)
+# Frozen state contract — Student Experience Portal
 
-Runtime: Node 24.14 + Express 5 + Drizzle ORM (better-sqlite3, file DB) + React 19 / Vite / TypeScript.
-Scope: 7 student views only. Admin/faculty/HOD UI, finance, real auth, real payments, real file
-storage, notification infra = NON-GOALS. Approvals are simulated staff-side actions.
+Runtime: Node.js + Express + EJS + better-sqlite3 (in-memory by default) + express-session.
+Scope: 7 student views + an 8-view faculty portal. Real payments, real file storage, and
+external notification delivery are declared non-goals.
 
-## 0. BASE ENTITY (one table, never one per form)
+This describes what [`src/engine/TransitionMatrix.js`](../src/engine/TransitionMatrix.js)
+actually enforces — the matrix is the single source of truth; this file is a readable summary
+of it, not the other way around. If the two ever disagree, the code wins.
 
-```ts
-Request {
-  id:         string            // req_<ulid>
-  tenant_id:  string            // NEVER optional
-  student_id: string            // NEVER optional
-  type:       'LEAVE' | 'INTERNSHIP' | 'DOCUMENT' | 'GRIEVANCE'
-  state:      string            // union of the per-type enums below
-  payload:    Payload           // discriminated union, keyed by `type`
-  history:    HistoryEntry[]
-  created_at: string
-  updated_at: string
-}
+## 0. Base entity (one table, never one per form)
 
-HistoryEntry {
-  from_state: string | null
-  to_state:   string
-  actor:      'SYSTEM' | 'STUDENT' | 'FACULTY' | 'HOD' | 'INSTITUTION'
-  actor_name: string
-  at:         string
-  note?:      string
-}
+```
+Request { id, tenantId, studentId, type, state, payload(JSON), createdAt, updatedAt }
+RequestHistory { requestId, fromState, toState, actor, at, note, effects, effectLog }
 ```
 
-Access rule: the repository exposes no query builder that compiles without BOTH `tenant_id` and
-`student_id`. Every read and write goes through `scope(ctx)`; `ctx` is `{tenant_id, student_id}`.
+* **One table.** `type` ∈ `LEAVE | INTERNSHIP | DOCUMENT | GRIEVANCE`. Adding a workflow means
+  adding a `WorkflowSpec` entry to `TransitionMatrix` and a payload class — no schema change, no
+  new route, no new template.
+* **Typed payloads.** `payload` is produced from a class per type (`LeavePayload`,
+  `InternshipPayload`, `DocumentPayload`, `GrievancePayload`) via `PayloadCodec`, which
+  validates before it writes. Never a free blob.
+* **One guard.** `RequestStateMachine.transition(scope, requestId, event, actor, note)` is the
+  only code in the application that changes a state. It resolves `(type, state, event, actor,
+  guard)` against `TransitionMatrix`, throws `IllegalTransitionException` on anything else,
+  appends a `RequestHistory` row, then fires the edge's declared side effects — in one SQLite
+  transaction.
+* **Automation is an actor.** After every move, `autopilot()` keeps firing `SYSTEM` edges whose
+  guards pass, up to 12 times. That is what makes a bonafide certificate arrive already issued,
+  and what turns an HOD approval into an attendance write with no further click.
+* **Scope.** Every repository module in [`src/repo/`](../src/repo) exports only scoped query
+  functions — no generic `findAll`/`findById` exists to be called by accident. Every declared
+  function is keyed on `tenantId` **and** `studentId`. See
+  [`REPOSITORY_SCOPE_RULES.md`](REPOSITORY_SCOPE_RULES.md) for the four documented exceptions.
 
-Guard: `transition(request, event, actor) -> Request`. Looks up `MATRIX[type][state][event]`.
-If absent, or `actor` mismatches, or the guard predicate fails -> `throw IllegalTransition`.
-Side-effects fire inside the same transaction as the state write. No side-effect outside `transition`.
+## 1. LEAVE
 
-Side-effect vocabulary: `ATTENDANCE_MUTATED`, `ACADEMIC_RECORD_MUTATED`, `VERIFICATION_ID_GENERATED`,
-`DOCUMENT_GENERATED`, `SERIAL_ASSIGNED`, `DUES_SNAPSHOT`, `DURATION_COMPUTED`, `ROUTE_DECIDED`.
+States: `SUBMITTED → FACULTY_PENDING → HOD_PENDING → ATTENDANCE_MUTATED → NOTIFIED`;
+`REJECTED` from either human state.
 
-## 1. LEAVE (Flagship 1)
-
-States: `SUBMITTED` `PENDING_FACULTY` `PENDING_HOD` `APPROVED`(T) `REJECTED`(T)
-
-| STATE | ACTOR | EVENT | GUARD | -> | SIDE_EFFECTS |
+| State | Actor | Event | Guard | → | Side effects |
 |---|---|---|---|---|---|
-| — | Student | SUBMIT | to_date >= from_date | SUBMITTED | DURATION_COMPUTED, attendance snapshot |
-| SUBMITTED | System | AUTO_EVALUATE | days<=2 AND attendance>=75 | APPROVED | ROUTE_DECIDED(auto), ATTENDANCE_MUTATED |
-| SUBMITTED | System | AUTO_EVALUATE | else | PENDING_FACULTY | ROUTE_DECIDED(manual) |
-| PENDING_FACULTY | Faculty | APPROVE | days>2 | PENDING_HOD | — |
-| PENDING_FACULTY | Faculty | APPROVE | days<=2 | APPROVED | ATTENDANCE_MUTATED |
-| PENDING_FACULTY | Faculty | REJECT | note required | REJECTED | — |
-| PENDING_HOD | HOD | APPROVE | — | APPROVED | ATTENDANCE_MUTATED |
-| PENDING_HOD | HOD | REJECT | note required | REJECTED | — |
+| — | Student | (create) | `to >= from`, span ≤ 30 days | SUBMITTED | — |
+| SUBMITTED | System | AUTO_VALIDATE | — | FACULTY_PENDING | `VALIDATE_LEAVE` |
+| FACULTY_PENDING | Faculty | APPROVE | — | HOD_PENDING | `NOTIFY` |
+| FACULTY_PENDING | Faculty | REJECT | note required | REJECTED | `NOTIFY_REJECTION` |
+| HOD_PENDING | HOD | APPROVE | — | ATTENDANCE_MUTATED | — |
+| HOD_PENDING | HOD | REJECT | note required | REJECTED | `NOTIFY_REJECTION` |
+| ATTENDANCE_MUTATED | System | APPLY | — | NOTIFIED | `MUTATE_ATTENDANCE`, `NOTIFY` |
 
-Payload: `from_date, to_date, day_count(sys), category('MEDICAL'|'PERSONAL'|'EVENT'), reason,
-attendance_at_submit(sys), route_reason(sys)`
+Payload: `leaveType, from, to, reason`, plus system-derived `dayCount, balanceAtSubmit,
+attendanceBefore, attendanceAfter, datesMutated, validation`.
 
-Student sees — SUBMITTED: "Checking eligibility…". APPROVED(auto): "Auto-approved. No human approval
-needed — 2 days, attendance 84%. Attendance updated." PENDING_FACULTY: "With class advisor. Routed
-because attendance is 68% (below 75%)." PENDING_HOD: "Advisor approved. With HOD — leave exceeds
-2 days." APPROVED: "Approved. 3 days marked as approved leave; attendance recalculated."
-REJECTED: "Rejected by <actor>: <note>." + [Apply Again] (creates a NEW request, not a transition).
+## 2. INTERNSHIP
 
-## 2. INTERNSHIP (Flagship 2)
+States: `SUBMITTED → FACULTY_VERIFICATION → INSTITUTION_APPROVAL → ACADEMIC_RECORD_MUTATED →
+VERIFICATION_ID_GENERATED`; return path `RETURNED → (student RESUBMIT) → SUBMITTED`; rejection
+`→ REJECTED`. Only ONE human touch (faculty verification) in the whole happy path.
 
-States: `SUBMITTED` `PENDING_VERIFICATION` `RETURNED_FOR_CORRECTION` `VERIFIED` `RECORDED`(T)
-Rejection path = a RETURN loop, not a dead end. Only ONE human touch in the whole workflow.
+| State | Actor | Event | → | Side effects |
+|---|---|---|---|---|
+| — | Student | (create) | SUBMITTED | — |
+| SUBMITTED | System | AUTO_CHECK | FACULTY_VERIFICATION | `CHECK_CERTIFICATE` |
+| FACULTY_VERIFICATION | Faculty | VERIFY | INSTITUTION_APPROVAL | — |
+| FACULTY_VERIFICATION | Faculty | RETURN (note required) | RETURNED | `NOTIFY_REJECTION` |
+| INSTITUTION_APPROVAL | Institution | APPROVE | ACADEMIC_RECORD_MUTATED | — |
+| INSTITUTION_APPROVAL | Institution | REJECT (note required) | REJECTED | `NOTIFY_REJECTION` |
+| ACADEMIC_RECORD_MUTATED | System | WRITE_RECORD | VERIFICATION_ID_GENERATED | `WRITE_ACADEMIC_RECORD`, `GENERATE_VERIFICATION_ID`, `PUBLISH_CERT_TO_DOCUMENTS`, `NOTIFY` |
+| RETURNED | Student | RESUBMIT (takes a corrected filename) | SUBMITTED | payload's `certificateRef` replaced |
 
-| STATE | ACTOR | EVENT | GUARD | -> | SIDE_EFFECTS |
+Payload: `company, role, from, to, details, certificateRef{filename,mime,sizeKb}|null`, plus
+system-derived `weeks, certificateCheck, credits, verifyId, documentSerial, returnCount`.
+
+## 3. DOCUMENT & CERTIFICATE
+
+States: `SUBMITTED → APPROVAL → DOCUMENT_GENERATED`, or straight `SUBMITTED → DOCUMENT_GENERATED`
+when auto-eligible; rejection `→ REJECTED`. The office can only issue — it can never reject.
+
+`BONAFIDE` for an **active student** is the sole auto-eligible case — the "Digital Razor": the
+one question ("is this an active student?") the system can answer itself, so it does, with zero
+human touches. Every other document type, and BONAFIDE for an inactive student, routes to the
+office.
+
+| State | Actor | Event | Guard | → | Side effects |
 |---|---|---|---|---|---|
-| — | Student | SUBMIT | — | SUBMITTED | — |
-| SUBMITTED | System | AUTO_EVALUATE | certificate present AND end_date<=today AND weeks>=2 | PENDING_VERIFICATION | DURATION_COMPUTED |
-| SUBMITTED | System | AUTO_EVALUATE | else | RETURNED_FOR_CORRECTION | ROUTE_DECIDED(auto-return) |
-| PENDING_VERIFICATION | Faculty | VERIFY | — | VERIFIED | — |
-| PENDING_VERIFICATION | Faculty | RETURN | note required | RETURNED_FOR_CORRECTION | — |
-| RETURNED_FOR_CORRECTION | Student | RESUBMIT | — | SUBMITTED | payload replaced, history appended |
-| VERIFIED | System | ISSUE | — | RECORDED | VERIFICATION_ID_GENERATED, ACADEMIC_RECORD_MUTATED |
+| — | Student | (create) | docType in the requestable set, 1–3 copies | SUBMITTED | — |
+| SUBMITTED | System | AUTO_ELIGIBILITY | `docType==BONAFIDE && student.active` | DOCUMENT_GENERATED | `RUN_ELIGIBILITY`, `GENERATE_DOCUMENT` |
+| SUBMITTED | System | AUTO_ELIGIBILITY | else | APPROVAL | `RUN_ELIGIBILITY` |
+| APPROVAL | Office | APPROVE | — | DOCUMENT_GENERATED | `GENERATE_DOCUMENT` |
+| APPROVAL | Office | REJECT (note required) | — | REJECTED | `NOTIFY_REJECTION` |
 
-Payload: `organisation, role, start_date, end_date, weeks(sys), mode('ONSITE'|'REMOTE'|'HYBRID'),
-stipend|null, certificate_ref{filename,mime,size}|null (simulated — no real storage),
-verification_id(sys)|null, verify_url(sys)|null, credits(sys)|null`
+Payload: `docType, purpose, copies`, plus system-derived `autoEligible, eligibilityReason,
+serialNo, verifyId, documentId`.
 
-Student sees — SUBMITTED: "Validating…". RETURNED(system): "Returned automatically: certificate
-missing / end date in the future. Fix and resubmit." + [Edit & Resubmit]. PENDING_VERIFICATION:
-"With <faculty> for certificate verification." RETURNED(faculty): faculty note + [Edit & Resubmit].
-VERIFIED: "Verified. Issuing verification ID…". RECORDED: verification ID + QR + "Added to academic
-record — 2 credits" + [Copy verify link].
+## 4. GRIEVANCE (supporting workflow, minimal contract)
 
-## 3. DOCUMENT & CERTIFICATE (Flagship 3)
+States: `SUBMITTED → ASSIGNED → UNDER_REVIEW → RESOLVED`.
 
-States: `SUBMITTED` `PENDING_OFFICE` `ISSUED`(T) `BLOCKED`(T)
-Rejection path is SYSTEM-driven (dues). The office can only issue — it can never reject.
+| State | Actor | Event | → | Side effects |
+|---|---|---|---|---|
+| — | Student | (create) | SUBMITTED | — |
+| SUBMITTED | System | AUTO_ASSIGN | ASSIGNED | — |
+| ASSIGNED | Faculty | START_REVIEW | UNDER_REVIEW | — |
+| UNDER_REVIEW | Faculty | RESOLVE (note required) | RESOLVED | `NOTIFY` |
 
-| STATE | ACTOR | EVENT | GUARD | -> | SIDE_EFFECTS |
-|---|---|---|---|---|---|
-| — | Student | SUBMIT | — | SUBMITTED | DUES_SNAPSHOT |
-| SUBMITTED | System | AUTO_EVALUATE | dues > 0 | BLOCKED | — |
-| SUBMITTED | System | AUTO_EVALUATE | dues==0 AND auto_generable | ISSUED | DOCUMENT_GENERATED, SERIAL_ASSIGNED, VERIFICATION_ID_GENERATED |
-| SUBMITTED | System | AUTO_EVALUATE | dues==0 AND !auto_generable | PENDING_OFFICE | ROUTE_DECIDED |
-| PENDING_OFFICE | Institution | ISSUE | — | ISSUED | DOCUMENT_GENERATED, SERIAL_ASSIGNED, VERIFICATION_ID_GENERATED |
+Payload: `category, subject, description, anonymous`. The desk a grievance is shown against
+(`DisplayLabels.desk(category)`) is a *display* mapping, not routing — `AUTO_ASSIGN` declares no
+side effects, so nothing in the engine actually dispatches to a named desk.
 
-`auto_generable`: BONAFIDE, ATTENDANCE_CERTIFICATE, FEE_RECEIPT, HALL_TICKET = true.
-TRANSCRIPT, CONDUCT_CERTIFICATE = false (needs attestation).
+## 5. Normalized read model (one call feeds Home AND My Requests AND the faculty inbox)
 
-Payload: `doc_type, purpose, copies(1..3), auto_generable(sys), dues_at_submit(sys),
-serial_no(sys)|null, verification_id(sys)|null, issued_at(sys)|null, document_html(sys)|null`
-
-Student sees — ISSUED instantly: "Issued in 2 seconds — Bonafide Certificate · BON/2026/00142"
-+ [View] [Verify link]. BLOCKED: "Cannot issue — ₹12,500 outstanding. Clear dues and request again."
-PENDING_OFFICE: "Transcripts require office attestation. With Examination Office."
-
-## 4. GRIEVANCE (view 7 — not a flagship, minimal contract)
-
-States: `SUBMITTED` `PENDING_DEPARTMENT` `ESCALATED` `RESOLVED`(T) `CLOSED_NO_ACTION`(T)
-
-| STATE | ACTOR | EVENT | GUARD | -> | SIDE_EFFECTS |
-|---|---|---|---|---|---|
-| — | Student | SUBMIT | — | SUBMITTED | — |
-| SUBMITTED | System | AUTO_ROUTE | — | PENDING_DEPARTMENT | ROUTE_DECIDED(by category), sla_due_at set |
-| PENDING_DEPARTMENT | System | SLA_BREACH | now > sla_due_at | ESCALATED | ROUTE_DECIDED(escalate to HOD) |
-| PENDING_DEPARTMENT / ESCALATED | Faculty\|HOD | RESOLVE | note required | RESOLVED | — |
-| PENDING_DEPARTMENT / ESCALATED | Faculty\|HOD | DISMISS | note required | CLOSED_NO_ACTION | — |
-
-Payload: `category('ACADEMIC'|'HOSTEL'|'EXAM'|'FEES'|'OTHER'), subject, description,
-anonymous:boolean, routed_to(sys), sla_due_at(sys)`
-
-## 5. NORMALIZED READ MODEL (one call feeds Home AND My Requests)
-
-```ts
+```
 RequestCard {
-  id, type, title, subtitle, state
-  state_label: string
-  badge_tone: 'pending' | 'action' | 'success' | 'danger'
-  progress: { steps: { key, label, status: 'done'|'current'|'pending'|'skipped'|'failed' }[] }
-  student_action: { label, event } | null      // the ONLY source of action buttons
-  artifacts: { kind, label, value, href? }[]   // verification id, serial, document link
-  created_at, updated_at
-  history: HistoryEntry[]
+  id, type, typeLabel, title, subtitle, state, stateLabel, badgeTone, headline
+  steps: [{ label, status: 'done'|'current'|'pending'|'skipped'|'failed' }]
+  studentAction: { label, event, tone, requiresNote, inputLabel } | null
+  artifacts: [{ kind, label, value, href? }]
+  createdAt, updatedAt
+  trail: [{ transition, actor, note, effects, proof, at }]
 }
 ```
-UI renders `progress.steps` through one `<Timeline>`, `badge_tone` through one `<StatusBadge>`,
-`student_action` through one `<ActionButton>`. Zero `if (type === ...)` anywhere in the UI layer.
-`skipped` renders the automated bypass (e.g. Leave that never touched Faculty/HOD) — this is where
-the automation is made visible to the student.
+
+Built by [`src/service/PresentationService.js`](../src/service/PresentationService.js) from
+`WorkflowSpec` metadata and the payload's own `title()`/`subtitle()`/`artifacts()` — no `if
+(type === ...)` anywhere in a view. `skipped` is how an automated bypass (e.g. a Leave that
+never touched Faculty/HOD) becomes visible to the student.
