@@ -60,6 +60,7 @@ app.use((req, res, next) => {
   const locale = readLocaleCookie(req) === 'hi' ? 'hi' : 'en';
   res.locals.locale = locale;
   res.locals.t = (key) => I18n.t(locale, key);
+  res.locals.helperTopicsJson = (audience) => I18n.helperTopicsJson(locale, audience);
   res.locals.currentPath = req.originalUrl;
   next();
 });

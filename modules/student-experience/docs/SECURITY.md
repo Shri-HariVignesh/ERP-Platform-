@@ -23,7 +23,8 @@ the specific claims below, live, against a running instance.
 |---|---|---|
 | Verification ID entropy | 12 symbols from a 32-character alphabet via `crypto.randomBytes` = 60 bits; alphabet omits I/L/O/U | [`src/engine/SideEffectDispatcher.js`](../src/engine/SideEffectDispatcher.js) `verifyId()` |
 | CSRF | Synchronizer token, one per session, required on every non-GET/HEAD/OPTIONS request | [`src/web/middleware/csrf.js`](../src/web/middleware/csrf.js) |
-| Response headers | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a CSP with `script-src 'none'` (the app ships no JavaScript to the browser at all) | [`src/web/middleware/securityHeaders.js`](../src/web/middleware/securityHeaders.js) |
+| Response headers | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a CSP with `script-src` scoped to a fresh per-request nonce (not `'self'`, not `'unsafe-inline'`) | [`src/web/middleware/securityHeaders.js`](../src/web/middleware/securityHeaders.js) |
+| Helper widget script | The one script the nonce admits ([`public/js/helper.js`](../public/js/helper.js)) makes no network calls (no fetch/XHR/WebSocket) and never uses `eval`/`innerHTML` — topic content is read from a same-origin JSON island via `textContent` only | [`public/js/helper.js`](../public/js/helper.js) |
 | Session fixation | A new session id is issued at login (`req.session.regenerate`) before the principal is attached | [`src/web/loginRoutes.js`](../src/web/loginRoutes.js) |
 | Session cookie | `httpOnly`, `sameSite: 'lax'` | [`src/server.js`](../src/server.js) |
 | Login oracle | One outcome for "no such user" and "wrong password"; an unknown username still runs a dummy bcrypt compare so response timing does not distinguish the two cases | [`src/web/middleware/auth.js`](../src/web/middleware/auth.js) |
