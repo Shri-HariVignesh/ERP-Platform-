@@ -27,7 +27,19 @@ export const AcademicWriteService = {
       if (!staff.teachesSubject(clazz, subjectCode)) {
         throw new StaffAccessException('not a subject you teach for this class');
       }
-      if (!date || date > new Date().toISOString().slice(0, 10)) {
+      // A malformed or absurd date must be rejected here. attendancePct() sums EVERY row for a
+      // student with no date bound, so a stray "0000-01-01" is not merely bad data sitting
+      // unused — it silently skews the real percentage every student and faculty member reads.
+      // "0000-01-01" is format-valid and lexicographically less than today, so only an explicit
+      // floor catches it; a bare format/NaN check does not.
+      const today = new Date().toISOString().slice(0, 10);
+      const floor = new Date();
+      floor.setFullYear(floor.getFullYear() - 3);
+      const floorIso = floor.toISOString().slice(0, 10);
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || date < floorIso) {
+        throw new StaffAccessException('date must be a valid, recent date in yyyy-MM-dd form');
+      }
+      if (date > today) {
         throw new StaffAccessException('a class day in the future cannot be marked');
       }
 
@@ -93,8 +105,11 @@ export const AcademicWriteService = {
       for (const [studentId, mark] of Object.entries(input)) {
         if (!mark) continue;
         if (!allowed.has(studentId)) throw new StaffAccessException('student not in a class you teach');
-        if (mark.internal < 0 || mark.internal > SgpaMath.MAX_INTERNAL
-          || mark.external < 0 || mark.external > SgpaMath.MAX_EXTERNAL) {
+        // Number.isInteger(NaN) is false, so this also rejects a non-numeric field that would
+        // otherwise sail past `< 0` / `> MAX` (both false for NaN) and get persisted as NaN,
+        // permanently corrupting the mark and poisoning every SGPA computed from it.
+        if (!Number.isInteger(mark.internal) || mark.internal < 0 || mark.internal > SgpaMath.MAX_INTERNAL
+          || !Number.isInteger(mark.external) || mark.external < 0 || mark.external > SgpaMath.MAX_EXTERNAL) {
           throw new StaffAccessException('marks out of range');
         }
 

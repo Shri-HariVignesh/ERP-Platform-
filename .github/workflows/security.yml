@@ -1,7 +1,6 @@
-name: security
+name: test
 
-# The standing guard. Every push and PR runs the full suite, the security-tagged group, and
-# the live probes. Any regression fails the build — that is the whole point of the file.
+# The standing guard. Every push and PR runs the test suite and an npm dependency audit.
 on:
   push:
     branches: ["**"]
@@ -13,64 +12,41 @@ defaults:
     working-directory: modules/student-experience
 
 jobs:
-  security:
-    name: suite + security group + live probes
+  test:
+    name: test suite
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          java-version: "17"
-          distribution: temurin
-          cache: maven
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: modules/student-experience/package-lock.json
 
-      # Run the suites as their own steps so a failure names which one broke, rather than
-      # surfacing as one opaque script failure.
-      - name: Full test suite
-        run: mvn -B test
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Security-tagged suite
-        run: mvn -B test -Dgroups=security
-
-      - name: Live security probes
-        run: SKIP_BUILD=1 ./scripts/security-check.sh
-
-      - name: Upload surefire reports on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: surefire-reports
-          path: modules/student-experience/target/surefire-reports/
-          retention-days: 7
+      - name: Run test suite
+        run: npm test
 
   dependencies:
-    name: dependency advisory review
+    name: dependency audit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-node@v4
         with:
-          java-version: "17"
-          distribution: temurin
-          cache: maven
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: modules/student-experience/package-lock.json
 
-      # This app pins Thymeleaf and Tomcat ABOVE the versions Spring Boot manages, because the
-      # managed ones carried advisories (see pom.xml). Printing the resolved tree on every run
-      # means a Boot bump that silently drags either back down is visible in the log.
-      - name: Resolved dependency versions
-        run: mvn -B dependency:tree -Dincludes=org.thymeleaf,org.apache.tomcat.embed
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Fail if a pinned dependency regressed
-        run: |
-          mvn -B dependency:tree > tree.txt 2>&1
-          fail=0
-          grep -q 'org.thymeleaf:thymeleaf:jar:3.1.5.RELEASE' tree.txt || {
-            echo "::error::Thymeleaf is not 3.1.5.RELEASE — CVE-2026-40477/40478/41901"; fail=1; }
-          grep -q 'tomcat-embed-core:jar:10.1.5[5-9]\|tomcat-embed-core:jar:10.1.[6-9][0-9]' tree.txt || {
-            echo "::error::Tomcat is below 10.1.55"; fail=1; }
-          exit $fail
+      - name: Fail on known high/critical vulnerabilities
+        run: npm audit --audit-level=high

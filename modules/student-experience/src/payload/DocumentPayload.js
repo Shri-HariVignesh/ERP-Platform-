@@ -35,7 +35,11 @@ export class DocumentPayload {
       throw new IllegalArgumentException('docType is required');
     }
     if (!this.purpose || !this.purpose.trim()) throw new IllegalArgumentException('purpose is required');
-    if (this.copies < 1 || this.copies > 3) throw new IllegalArgumentException('copies must be 1–3');
+    // Number.isInteger(NaN) is false — this is the gate every payload passes through, so a
+    // non-numeric `copies` must be caught here even though the form layer also checks it.
+    if (!Number.isInteger(this.copies) || this.copies < 1 || this.copies > 3) {
+      throw new IllegalArgumentException('copies must be 1–3');
+    }
   }
 
   static fromJSON(o) { return Object.assign(new DocumentPayload(), o, { sys: { ...new DocumentPayload().sys, ...o.sys } }); }

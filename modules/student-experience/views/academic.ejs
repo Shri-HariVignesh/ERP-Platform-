@@ -15,7 +15,7 @@
   <section class="stats big">
     <div>
       <span>Attendance</span>
-      <strong><%= attendancePct %>%</strong>
+      <strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong>
       <small><%= approvedLeaveDays %> day(s) counted as approved leave</small>
     </div>
     <div>

@@ -247,8 +247,8 @@ function render(t, s, title, serial, verifyIdValue, body) {
   </dl>
   <p class="body">${body}</p>
   <footer>
-    <div><span>Serial</span><strong>${serial}</strong></div>
-    <div><span>Verify ID</span><strong>${verifyIdValue}</strong></div>
+    <div><span>Serial</span><strong>${esc(serial)}</strong></div>
+    <div><span>Verify ID</span><strong>${esc(verifyIdValue)}</strong></div>
     <div><span>Issued</span><strong>${issued}</strong></div>
   </footer>
   <p class="sig">Digitally issued by ${esc(t.shortName)} on CampusOS. No physical signature required.</p>

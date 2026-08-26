@@ -44,7 +44,7 @@
   </section>
 
   <section class="stats">
-    <div><span>Attendance</span><strong><%= attendancePct %>%</strong></div>
+    <div><span>Attendance</span><strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong></div>
     <div><span>Open requests</span><strong><%= openCount %></strong></div>
     <div><span>Leave balance</span><strong><%= student.leaveBalance %> days</strong></div>
     <div><span>Fee dues</span><strong>₹<%= student.feeDues %></strong></div>
