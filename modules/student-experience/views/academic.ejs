@@ -28,10 +28,16 @@
       <% if (hallTicket) { %><strong>Released</strong><small><%= hallTicket.serialNo %></small>
       <% } else { %><strong class="muted">Not issued</strong><small>Request it under Documents</small><% } %>
     </div>
+    <div>
+      <span>Academic Bank of Credits</span>
+      <% if (student.abcId) { %><strong><%= student.abcId %></strong><small>ABC ID — credits are portable across institutions</small>
+      <% } else { %><strong class="muted">Not registered</strong><small>Register on DigiLocker to get an ABC ID</small><% } %>
+    </div>
   </section>
 
   <section>
-    <div class="head"><h2>Semester results</h2></div>
+    <div class="head"><h2>Semester results <span class="kind">CBCS</span></h2></div>
+    <p class="hint">Semester GPA under the Choice Based Credit System — SGPA is credit-weighted per subject, not averaged flat across them.</p>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th></tr></thead>
       <tbody>

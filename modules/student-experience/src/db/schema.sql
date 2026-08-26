@@ -26,7 +26,10 @@ CREATE TABLE students (
   hodName TEXT,
   -- UGC Anti-Ragging Regulations, 2009: an annual acknowledgment, not a one-time signup step.
   -- NULL means not yet acknowledged for the current cycle.
-  antiRaggingAffidavitAt TEXT
+  antiRaggingAffidavitAt TEXT,
+  -- NEP 2020 / Academic Bank of Credits: a 12-digit ABC ID, once the student is registered
+  -- with DigiLocker/ABC. NULL means not yet registered — display-only, nothing reads it back.
+  abcId TEXT
 );
 
 CREATE TABLE student_accounts (

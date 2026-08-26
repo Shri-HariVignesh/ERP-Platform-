@@ -38,6 +38,21 @@
     <button class="btn action" type="submit">Submit grievance</button>
   </form>
 
+  <details class="trail">
+    <summary>Institutional committees &amp; contacts (UGC-mandated)</summary>
+    <ul class="hist">
+      <li><span class="step">Grievance Redressal Committee</span><span class="who">Dr. Latha Pillai, Registrar · registrar@snit.ac.in</span></li>
+      <li><span class="step">Anti-Ragging Committee</span><span class="who">Dr. Ravi Nair · antiragging@snit.ac.in</span></li>
+      <li><span class="step">Internal Complaints Committee (ICC)</span><span class="who">Prof. Meena Pillai · icc@snit.ac.in</span></li>
+      <li><span class="step">SC/ST Cell</span><span class="who">Prof. Ajitha Kumari · scstcell@snit.ac.in</span></li>
+      <li><span class="step">Equal Opportunity Cell</span><span class="who">Prof. Deepa Thomas · eoc@snit.ac.in</span></li>
+      <li><span class="step">RTI / Public Information Officer</span><span class="who">Vinod Menon · rti@snit.ac.in</span></li>
+      <li><span class="step">Ombudsperson</span><span class="who">Justice (Retd.) K. Balakrishnan · ombudsperson@snit.ac.in</span></li>
+    </ul>
+    <p class="fineprint">A resolved grievance can be escalated to the Ombudsperson from its card
+      below if the committee's decision does not resolve the matter to your satisfaction.</p>
+  </details>
+
   <div class="cards">
     <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/grievance' }) %><% }) %>
   </div>

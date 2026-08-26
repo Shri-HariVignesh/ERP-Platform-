@@ -33,10 +33,10 @@ function isWeekend(iso) {
   return d === 0 || d === 6;
 }
 
-function student(id, tenantId, rollNo, name, email, program, department, semester, section, feeDues, advisor, hod, affidavitAck = true) {
+function student(id, tenantId, rollNo, name, email, program, department, semester, section, feeDues, advisor, hod, affidavitAck = true, abcId = null) {
   const s = { id, tenantId, rollNo, name, email, program, department, semester, section,
     feeDues, active: true, leaveBalance: 12, advisorName: advisor, hodName: hod,
-    antiRaggingAffidavitAt: affidavitAck ? day(-200) : null };
+    antiRaggingAffidavitAt: affidavitAck ? day(-200) : null, abcId };
   return studentRepo.save(s);
 }
 
@@ -228,7 +228,7 @@ export function runSeed() {
   const snit = tenantRepo.save({ id: 't_snit', name: 'Sree Narayana Institute of Technology', shortName: 'SNIT', city: 'Kollam, Kerala', accent: '#3b6fd4' });
   // affidavitAck=false on purpose — Hari is the primary demo login, so the acknowledgment
   // banner (and the route behind it) is actually reachable in the demo, not just in seed data.
-  const hari = student('s_hari', snit.id, 'SNIT21CS042', 'Hari Prasad', 'hari.prasad@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 12500, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar', false);
+  const hari = student('s_hari', snit.id, 'SNIT21CS042', 'Hari Prasad', 'hari.prasad@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 12500, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar', false, '220012345678');
   account(snit.id, hari.id);
 
   const classDays = seedAttendance(snit.id, hari.id);
@@ -236,7 +236,7 @@ export function runSeed() {
   seedTerm(snit.id);
   seedRequests(new Scope(snit.id, hari.id), classDays);
 
-  const divya = student('s_divya', snit.id, 'SNIT21CS051', 'Divya Rajan', 'divya.rajan@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 0, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar');
+  const divya = student('s_divya', snit.id, 'SNIT21CS051', 'Divya Rajan', 'divya.rajan@snit.ac.in', 'B.Tech Computer Science', CSE, 5, 'A', 0, 'Prof. Anjali Menon', 'Dr. R. Krishnakumar', true, '220087654321');
   account(snit.id, divya.id);
   const divyaDays = seedAttendance(snit.id, divya.id);
   seedMarksAndResults(snit.id, divya.id, 'CS', 5);
