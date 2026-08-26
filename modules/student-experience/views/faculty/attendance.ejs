@@ -53,7 +53,16 @@
       workflow when an HOD approves, and the register is not the place to undo a completed
       approval.</p>
 
-    <button class="btn success" type="submit">Save register</button>
+    <div class="act row">
+      <button class="btn success" type="submit">Save register</button>
+      <span class="bulk-actions">
+        Bulk: <button class="btn ghost" type="submit" name="bulk" value="PRESENT">Mark all present</button>
+        <button class="btn ghost" type="submit" name="bulk" value="ABSENT">Mark all absent</button>
+      </span>
+    </div>
+    <p class="hint">A bulk button writes the whole class immediately — including a leave-locked
+      row's neighbours, never the leave-locked row itself — so the usual flow is bulk-mark the
+      class, then flip the handful of exceptions with the radios and Save register.</p>
   </form>
 </main>
 </body>

@@ -69,6 +69,9 @@ facultyRoutes.get('/tasks', (req, res) => {
 
 /* ------------------------------ 3. STUDENTS ------------------------------ */
 
+const STUDENTS_PAGE_SIZE = 10;
+const STUDENTS_SORTS = { rollNo: (s) => s.rollNo, name: (s) => s.name };
+
 facultyRoutes.get('/students', (req, res) => {
   const scope = base(req, res, 'students');
   let roster = StaffScopeResolver.roster(scope);
@@ -77,8 +80,27 @@ facultyRoutes.get('/students', (req, res) => {
     const needle = q.trim().toLowerCase();
     roster = roster.filter((s) => s.name.toLowerCase().includes(needle) || s.rollNo.toLowerCase().includes(needle));
   }
-  res.locals.roster = roster;
+
+  const sort = STUDENTS_SORTS[req.query.sort] ? req.query.sort : 'rollNo';
+  const dir = req.query.dir === 'desc' ? 'desc' : 'asc';
+  const key = STUDENTS_SORTS[sort];
+  roster = [...roster].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+  if (dir === 'desc') roster.reverse();
+
+  const total = roster.length;
+  const totalPages = Math.max(1, Math.ceil(total / STUDENTS_PAGE_SIZE));
+  const page = Math.min(totalPages, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const start = (page - 1) * STUDENTS_PAGE_SIZE;
+
+  res.locals.roster = roster.slice(start, start + STUDENTS_PAGE_SIZE);
   res.locals.q = q ?? '';
+  res.locals.sort = sort;
+  res.locals.dir = dir;
+  res.locals.page = page;
+  res.locals.totalPages = totalPages;
+  res.locals.total = total;
+  res.locals.rangeStart = total === 0 ? 0 : start + 1;
+  res.locals.rangeEnd = Math.min(start + STUDENTS_PAGE_SIZE, total);
   res.render('faculty/students');
 });
 
@@ -158,14 +180,26 @@ facultyRoutes.post('/attendance', (req, res) => {
   const { clazz, subject, date } = req.body;
   const key = ClassKey.parse(clazz);
 
-  const input = {};
-  for (const [k, v] of Object.entries(req.body)) {
-    if (!k.startsWith('status_') || !v) continue;
-    input[k.slice('status_'.length)] = v;
+  // A bulk button ("Mark all present/absent") ignores whatever the individual radios say and
+  // applies one status to the whole class roster in a single write — markAttendance's own
+  // APPROVED_LEAVE guard still protects a leave-locked row from either path.
+  const bulk = req.body.bulk === 'PRESENT' || req.body.bulk === 'ABSENT' ? req.body.bulk : null;
+  let input;
+  if (bulk) {
+    input = {};
+    for (const s of StaffScopeResolver.classRoster(scope, key)) input[s.id] = bulk;
+  } else {
+    input = {};
+    for (const [k, v] of Object.entries(req.body)) {
+      if (!k.startsWith('status_') || !v) continue;
+      input[k.slice('status_'.length)] = v;
+    }
   }
 
   const w = AcademicWriteService.markAttendance(scope, key, subject, date, input);
-  let msg = `${w.marked} student(s) marked for ${date}.`;
+  let msg = bulk
+    ? `${w.marked} student(s) bulk-marked ${bulk.toLowerCase()} for ${date}.`
+    : `${w.marked} student(s) marked for ${date}.`;
   if (w.leaveProtected > 0) {
     msg += ` ${w.leaveProtected} left untouched — approved leave is owned by the leave workflow, not the register.`;
   }
