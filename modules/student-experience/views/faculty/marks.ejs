@@ -21,7 +21,7 @@
     <input type="hidden" name="clazz" value="<%= clazz.token() %>">
     <input type="hidden" name="subject" value="<%= subject %>">
 
-    <table class="tbl register">
+    <div class="tbl-wrap"><table class="tbl register">
       <thead>
         <tr>
           <th>Roll no</th><th>Name</th>
@@ -48,7 +48,7 @@
         </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
 
     <p class="hint">Finalizing is one-way. A published mark cannot be quietly returned to draft
       — a correction is a new finalized value, and it audits as one.</p>

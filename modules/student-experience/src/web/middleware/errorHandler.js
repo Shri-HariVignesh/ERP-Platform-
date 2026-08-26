@@ -1,5 +1,6 @@
 import { IllegalTransitionException } from '../../engine/IllegalTransitionException.js';
 import { ScopeAccessException } from '../../service/errors.js';
+import { homeFor } from './errorPageContext.js';
 
 /**
  * SECURITY (CWE-209): the internal exception MESSAGE is logged, never returned. Probing
@@ -13,21 +14,23 @@ export function errorHandler(err, req, res, next) {
   if (err instanceof IllegalTransitionException) {
     console.warn('IllegalTransitionException:', err.message);
     return res.status(400).render('error', {
-      status: 400, error: 'Bad Request', message: 'That request is not available.', path: req.path,
+      status: 400, error: 'Bad Request', message: 'That request is not available.', path: req.path, ...homeFor(req),
     });
   }
   if (err instanceof ScopeAccessException) {
     console.warn(`${err.name}:`, err.message);
     return res.status(403).render('error', {
-      status: 403, error: 'Forbidden', message: 'Not available in your scope.', path: req.path,
+      status: 403, error: 'Forbidden', message: 'Not available in your scope.', path: req.path, ...homeFor(req),
     });
   }
   console.error(err);
   return res.status(500).render('error', {
-    status: 500, error: 'Internal Server Error', message: 'Something went wrong handling that request.', path: req.path,
+    status: 500, error: 'Internal Server Error', message: 'Something went wrong handling that request.', path: req.path, ...homeFor(req),
   });
 }
 
 export function notFoundHandler(req, res) {
-  res.status(404).render('error', { status: 404, error: 'Not Found', message: 'Nothing here.', path: req.path });
+  res.status(404).render('error', {
+    status: 404, error: 'Not Found', message: 'Nothing here.', path: req.path, ...homeFor(req),
+  });
 }

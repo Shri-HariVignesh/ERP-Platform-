@@ -16,7 +16,7 @@
   <form class="filters" action="/faculty/tasks" method="get">
     <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>">All</button>
     <% types.forEach(function(t) { %>
-    <button name="filter" value="<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= t %></button>
+    <button name="filter" value="<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= DisplayLabels.type(t) %></button>
     <% }) %>
   </form>
 

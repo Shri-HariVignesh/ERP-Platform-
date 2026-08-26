@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { homeFor } from './errorPageContext.js';
 
 /**
  * A synchronizer-token CSRF guard: every state-changing form
@@ -18,7 +19,7 @@ export function csrfProtect(req, res, next) {
   const token = req.body && req.body._csrf;
   if (!token || !req.session.csrfToken || token !== req.session.csrfToken) {
     return res.status(403).render('error', {
-      status: 403, error: 'Forbidden', message: 'Your session expired — please try again.', path: req.path,
+      status: 403, error: 'Forbidden', message: 'Your session expired — please try again.', path: req.path, ...homeFor(req),
     });
   }
   next();

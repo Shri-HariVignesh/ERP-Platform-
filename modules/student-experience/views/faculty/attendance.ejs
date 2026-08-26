@@ -22,7 +22,7 @@
     <input type="hidden" name="subject" value="<%= subject %>">
     <input type="hidden" name="date" value="<%= date %>">
 
-    <table class="tbl register">
+    <div class="tbl-wrap"><table class="tbl register">
       <thead>
         <tr><th>Roll no</th><th>Name</th><th>Present</th><th>Absent</th><th>Recorded</th><th>Attendance</th></tr>
       </thead>
@@ -47,7 +47,7 @@
         </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
 
     <p class="hint">Approved-leave days are locked. That status is written by the leave
       workflow when an HOD approves, and the register is not the place to undo a completed

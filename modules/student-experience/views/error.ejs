@@ -10,7 +10,7 @@
 <main class="loginbox">
   <h1><%= status %> · <%= error %></h1>
   <p class="sub"><%= (typeof message !== 'undefined' && message) ? message : 'Something went wrong handling that request.' %></p>
-  <p class="fineprint"><a href="/">← Student portal</a> &nbsp;·&nbsp; <a href="/login">Staff sign in</a></p>
+  <p class="fineprint"><a href="<%= homeHref %>">← <%= homeLabel %></a></p>
 </main>
 </body>
 </html>

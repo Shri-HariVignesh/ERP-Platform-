@@ -32,20 +32,20 @@
 
   <section>
     <div class="head"><h2>Semester results</h2></div>
-    <table class="tbl">
+    <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th></tr></thead>
       <tbody>
         <% results.forEach(function(r) { %>
         <tr><td>Semester <%= r.semester %></td><td><%= r.sgpa %></td><td><%= r.credits %></td></tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section>
     <div class="head"><h2>Subject marks</h2></div>
     <% if (marks.length > 0) { %>
-    <table class="tbl">
+    <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Sem</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Credits</th></tr></thead>
       <tbody>
         <% marks.forEach(function(m) { %>
@@ -57,7 +57,7 @@
         </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
     <% } else { %>
     <p class="empty">No subject marks published yet. Marks appear here once your faculty finalizes them.</p>
     <% } %>
