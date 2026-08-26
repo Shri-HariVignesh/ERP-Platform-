@@ -204,6 +204,16 @@ function seedSnitStaff(tenantId) {
 
   staff('st_registrar', tenantId, 'registrar.snit', 'Dr. Latha Pillai (Registrar)', 'registrar@snit.ac.in', null, [StaffRole.INSTITUTION]);
   staff('st_exam', tenantId, 'exam.office', 'Examination Office', 'exams@snit.ac.in', null, [StaffRole.OFFICE]);
+
+  // UGC-mandated statutory committees. No teaching assignment — their reach into a student's
+  // requests is institution-wide but strictly grievance-only (see GrievanceVisibility.js),
+  // never the class-scoped roster a FACULTY/HOD role would otherwise carry.
+  staff('st_icc', tenantId, 'icc.chair', 'Prof. Meena Pillai (ICC Chairperson)', 'icc@snit.ac.in', null, [StaffRole.ICC]);
+  staff('st_antiragging', tenantId, 'antiragging.chair', 'Dr. Ravi Nair (Anti-Ragging Committee)', 'antiragging@snit.ac.in', null, [StaffRole.ANTI_RAGGING]);
+  staff('st_scst', tenantId, 'scst.cell', 'Prof. Ajitha Kumari (SC/ST Cell)', 'scstcell@snit.ac.in', null, [StaffRole.SC_ST_CELL]);
+  staff('st_eoc', tenantId, 'equal.opportunity', 'Prof. Deepa Thomas (Equal Opportunity Cell)', 'eoc@snit.ac.in', null, [StaffRole.EQUAL_OPPORTUNITY_CELL]);
+  staff('st_rti', tenantId, 'rti.officer', 'Vinod Menon (RTI / Public Information Officer)', 'rti@snit.ac.in', null, [StaffRole.RTI_OFFICER]);
+  staff('st_ombuds', tenantId, 'ombudsperson', 'Justice (Retd.) K. Balakrishnan (Ombudsperson)', 'ombudsperson@snit.ac.in', null, [StaffRole.OMBUDSPERSON]);
 }
 
 function seedAceStaff(tenantId) {
@@ -236,6 +246,12 @@ export function runSeed() {
   seedMarksAndResults(snit.id, nikhil.id, 'EC', 5);
   RequestService.create(new Scope(snit.id, nikhil.id), RequestType.LEAVE,
     leave(LeaveType.PERSONAL, nikhilDays[5], nikhilDays[6], "Cousin's wedding in Alappuzha"));
+  // A confidential category: visible to the Anti-Ragging Committee (and Institution) only —
+  // Prof. Suresh Babu, Nikhil's own class advisor, must NOT see this in his inbox or on
+  // Nikhil's profile. Demonstrates GrievanceVisibility.js live, not just in a docstring.
+  RequestService.create(new Scope(snit.id, nikhil.id), RequestType.GRIEVANCE,
+    grievance(GrievanceCategory.RAGGING, 'Senior students demanding money and errands from first-years',
+      'Since the start of the semester, a group of final-year hostel residents has been demanding money and personal errands from first-year students, with threats over refusal.'));
 
   seedSnitStaff(snit.id);
 

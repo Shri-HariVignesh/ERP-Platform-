@@ -28,6 +28,21 @@ export class StaffScope {
 
   mayAct(a) { return this.actors().includes(a); }
 
+  /**
+   * Statutory committees required by UGC regulations. Deliberately NOT folded into canSee()/
+   * roster(): those two govern the FULL student profile (attendance, marks, every other
+   * request) and widening them institution-wide for, say, an Anti-Ragging Committee seat would
+   * hand that committee everyone's academic record, not just the ragging complaints that are
+   * actually theirs to see. Committee reach is instead a narrow, grievance-only, category-
+   * gated path — see StaffScopeResolver.grievanceRoster() and GrievanceVisibility.js.
+   */
+  static COMMITTEE_ROLES = [
+    StaffRole.ICC, StaffRole.ANTI_RAGGING, StaffRole.SC_ST_CELL,
+    StaffRole.EQUAL_OPPORTUNITY_CELL, StaffRole.RTI_OFFICER, StaffRole.OMBUDSPERSON,
+  ];
+
+  isCommitteeMember() { return StaffScope.COMMITTEE_ROLES.some((r) => this.hasRole(r)); }
+
   /** REQUEST breadth. Tenant equality is a precondition of every branch. */
   canSee(s) {
     if (!s || this.tenantId !== s.tenantId) return false;

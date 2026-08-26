@@ -38,3 +38,11 @@ Note what is NOT here: the staff inbox. It is
 `requestRepo.findByTenantIdAndStudentIdInAndStateInOrderByCreatedAtDesc`, which carries both
 original dimensions — the roster is resolved from the authenticated principal first, and only
 then does the query run.
+
+One more deliberately NOT here: confidential grievance categories (ragging, sexual harassment,
+SC/ST discrimination, equal opportunity, RTI). That restriction is not a repository-scope rule —
+tenant+roster is still exactly what bounds the query — it is a SERVICE-layer rule on top,
+because it turns on the request's own payload content (`category`), not on the caller's
+identity the way every rule above does. See
+[`../src/service/GrievanceVisibility.js`](../src/service/GrievanceVisibility.js) and
+`STATE_CONTRACT.md`'s GRIEVANCE section for where it actually lives.

@@ -97,3 +97,37 @@ test('DOCUMENT: transcript always routes to the office, even for an active stude
   const issued = RequestStateMachine.transition(scope, r.id, Event.APPROVE, Actor.OFFICE, null);
   assert.equal(issued.state, RequestState.DOCUMENT_GENERATED);
 });
+
+test('GRIEVANCE: a resolved complaint can be escalated to the Ombudsperson, who is a genuinely different actor', () => {
+  const { scope } = fixture('ombuds1');
+  const r = RequestStateMachine.create(scope, RequestType.GRIEVANCE, grievancePayload());
+  const started = RequestStateMachine.transition(scope, r.id, Event.START_REVIEW, Actor.FACULTY, null);
+  const resolved = RequestStateMachine.transition(scope, started.id, Event.RESOLVE, Actor.FACULTY, 'fixed it');
+  assert.equal(resolved.state, RequestState.RESOLVED);
+
+  // The desk that resolved it cannot also decide the appeal — that would defeat the point of
+  // a second-tier reviewer.
+  assert.throws(
+    () => RequestStateMachine.transition(scope, resolved.id, Event.DECIDE, Actor.FACULTY, 'no'),
+    IllegalTransitionException,
+  );
+
+  assert.throws(
+    () => RequestStateMachine.transition(scope, resolved.id, Event.ESCALATE, Actor.STUDENT, ''),
+    IllegalTransitionException,
+    'the appeal reason is required, same as any other note-required edge',
+  );
+
+  const escalated = RequestStateMachine.transition(scope, resolved.id, Event.ESCALATE, Actor.STUDENT, 'The heater is still broken a month later');
+  assert.equal(escalated.state, RequestState.OMBUDSMAN_REVIEW);
+
+  assert.throws(
+    () => RequestStateMachine.transition(scope, escalated.id, Event.DECIDE, Actor.FACULTY, 'not my call'),
+    IllegalTransitionException,
+    'the original desk has no standing over the appeal',
+  );
+
+  const decided = RequestStateMachine.transition(scope, escalated.id, Event.DECIDE, Actor.OMBUDSPERSON, 'Desk followed procedure correctly; appeal dismissed');
+  assert.equal(decided.state, RequestState.OMBUDSMAN_DECIDED);
+  assert.throws(() => RequestStateMachine.transition(scope, decided.id, Event.DECIDE, Actor.OMBUDSPERSON, 'again'), IllegalTransitionException);
+});

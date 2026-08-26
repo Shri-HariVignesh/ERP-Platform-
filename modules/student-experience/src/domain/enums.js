@@ -23,6 +23,8 @@ export const RequestState = Object.freeze({
   APPROVAL: 'APPROVAL', DOCUMENT_GENERATED: 'DOCUMENT_GENERATED',
   // GRIEVANCE
   ASSIGNED: 'ASSIGNED', UNDER_REVIEW: 'UNDER_REVIEW', RESOLVED: 'RESOLVED',
+  // GRIEVANCE — appeal, per the UGC (Redressal of Grievances of Students) Regulations, 2023
+  OMBUDSMAN_REVIEW: 'OMBUDSMAN_REVIEW', OMBUDSMAN_DECIDED: 'OMBUDSMAN_DECIDED',
 });
 
 const ACTOR_DISPLAY = {
@@ -32,11 +34,15 @@ const ACTOR_DISPLAY = {
   HOD: 'Head of Department',
   INSTITUTION: 'Institution',
   OFFICE: 'Examination Office',
+  // The statutory appellate authority under the UGC (Redressal of Grievances of Students)
+  // Regulations, 2023 — a distinct actor because it is genuinely a different decision-maker
+  // from the desk that resolved the grievance, not a display alias for one.
+  OMBUDSPERSON: 'Ombudsperson',
 };
 
 export const Actor = Object.freeze({
   SYSTEM: 'SYSTEM', STUDENT: 'STUDENT', FACULTY: 'FACULTY',
-  HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
+  HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE', OMBUDSPERSON: 'OMBUDSPERSON',
   display: (a) => ACTOR_DISPLAY[a],
 });
 
@@ -45,6 +51,7 @@ export const Event = Object.freeze({
   AUTO_ASSIGN: 'AUTO_ASSIGN', APPLY: 'APPLY', WRITE_RECORD: 'WRITE_RECORD',
   APPROVE: 'APPROVE', REJECT: 'REJECT', VERIFY: 'VERIFY', RETURN: 'RETURN',
   RESUBMIT: 'RESUBMIT', START_REVIEW: 'START_REVIEW', RESOLVE: 'RESOLVE',
+  ESCALATE: 'ESCALATE', DECIDE: 'DECIDE',
 });
 
 export const SideEffect = Object.freeze({
@@ -84,14 +91,29 @@ export const AttendanceStatus = Object.freeze({
 
 export const MarkStatus = Object.freeze({ DRAFT: 'DRAFT', FINALIZED: 'FINALIZED' });
 
-const STAFF_ROLE_ACTOR = { FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE' };
+const STAFF_ROLE_ACTOR = {
+  FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
+  // UGC-mandated statutory committees. Each resolves a GRIEVANCE the same way a "desk" already
+  // does (Actor.FACULTY — see TransitionMatrix.js's GRIEVANCE spec) — the distinction between
+  // them is not a different matrix actor, it is which CATEGORY of grievance they may even see
+  // (GrievanceVisibility.js), which is a scoping rule, not a state-machine one.
+  ICC: 'FACULTY', ANTI_RAGGING: 'FACULTY', SC_ST_CELL: 'FACULTY',
+  EQUAL_OPPORTUNITY_CELL: 'FACULTY', RTI_OFFICER: 'FACULTY',
+  OMBUDSPERSON: 'OMBUDSPERSON',
+};
 const STAFF_ROLE_DISPLAY = {
   FACULTY: 'Faculty', HOD: 'Head of Department', INSTITUTION: 'Institution', OFFICE: 'Examination Office',
+  ICC: 'Internal Complaints Committee', ANTI_RAGGING: 'Anti-Ragging Committee',
+  SC_ST_CELL: 'SC/ST Cell', EQUAL_OPPORTUNITY_CELL: 'Equal Opportunity Cell',
+  RTI_OFFICER: 'RTI Cell', OMBUDSPERSON: 'Ombudsperson',
 };
 
 /** Each constant maps to EXACTLY ONE Actor of the frozen matrix. Never STUDENT, never SYSTEM. */
 export const StaffRole = Object.freeze({
   FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
+  ICC: 'ICC', ANTI_RAGGING: 'ANTI_RAGGING', SC_ST_CELL: 'SC_ST_CELL',
+  EQUAL_OPPORTUNITY_CELL: 'EQUAL_OPPORTUNITY_CELL', RTI_OFFICER: 'RTI_OFFICER',
+  OMBUDSPERSON: 'OMBUDSPERSON',
   actor: (r) => STAFF_ROLE_ACTOR[r],
   display: (r) => STAFF_ROLE_DISPLAY[r],
 });
@@ -104,4 +126,10 @@ export const LeaveType = Object.freeze({ MEDICAL: 'MEDICAL', PERSONAL: 'PERSONAL
 
 export const GrievanceCategory = Object.freeze({
   ACADEMIC: 'ACADEMIC', HOSTEL: 'HOSTEL', EXAM: 'EXAM', FEES: 'FEES', OTHER: 'OTHER',
+  // UGC-mandated categories — each routes to its own statutory committee, not the general
+  // desk, and each is CONFIDENTIAL: only that committee (and INSTITUTION) may see it. See
+  // GrievanceVisibility.js — this is enforced at the service layer, not just a display choice.
+  RAGGING: 'RAGGING', SEXUAL_HARASSMENT: 'SEXUAL_HARASSMENT',
+  SC_ST_DISCRIMINATION: 'SC_ST_DISCRIMINATION', EQUAL_OPPORTUNITY: 'EQUAL_OPPORTUNITY',
+  RTI: 'RTI',
 });

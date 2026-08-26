@@ -45,6 +45,18 @@ export const StaffScopeResolver = {
 
   rosterIds(scope) { return this.roster(scope).map((s) => s.id); },
 
+  /**
+   * Institution-wide student list, for a UGC statutory committee's grievance reach ONLY. Never
+   * used for canSee()/roster() — see the comment on StaffScope.isCommitteeMember() for why:
+   * this must stay a narrow, GRIEVANCE-type-only, category-gated path (GrievanceVisibility.js
+   * applies on top of this everywhere it is used), not a general widening of what the role can
+   * see about a student.
+   */
+  grievanceRoster(scope) {
+    if (!scope.isCommitteeMember()) return [];
+    return studentRepo.findByTenantIdOrderByRollNoAsc(scope.tenantId);
+  },
+
   /** The class roster, for attendance and marks. Requires the staff member to teach it. */
   classRoster(scope, c) {
     if (!scope.teaches(c)) throw new StaffAccessException('not a class you teach');
