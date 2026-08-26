@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Internship' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Internship</h1>
+    <p class="sub">One faculty verification and one institutional approval. After that the system
+      writes your academic record, mints a verification ID with a scannable QR, and files the
+      certificate into Documents — with no clerk in the loop.</p>
+  </section>
+
+  <form class="panel" action="/internship" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2>Submit an internship</h2>
+    <% if (errors && errors.length) { %><p class="errs"><% errors.forEach(function(e) { %><span><%= e %></span><% }) %></p><% } %>
+
+    <div class="grid">
+      <label>Company <input type="text" name="company" value="<%= form.company %>" required></label>
+      <label>Role <input type="text" name="role" value="<%= form.role %>" required></label>
+    </div>
+    <div class="grid">
+      <label>From <input type="date" name="from" value="<%= form.from %>" required></label>
+      <label>To <input type="date" name="to" value="<%= form.to %>" required></label>
+    </div>
+    <label>What you worked on <input type="text" name="details" value="<%= form.details %>" required></label>
+    <label>Completion certificate
+      <input type="text" name="certificateFilename" value="<%= form.certificateFilename %>" required
+             placeholder="e.g. infosys-completion-certificate.pdf">
+    </label>
+    <p class="hint">This prototype records the filename as a reference rather than storing the
+      file itself, so the verification step still has something to check.</p>
+    <button class="btn action" type="submit">Submit internship</button>
+  </form>
+
+  <div class="cards">
+    <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/internship' }) %><% }) %>
+  </div>
+  <% if (cards.length === 0) { %><p class="empty">No internships submitted yet.</p><% } %>
+</main>
+</body>
+</html>

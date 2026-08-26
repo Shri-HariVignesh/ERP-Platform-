@@ -1,0 +1,32 @@
+<header class="topbar staff">
+  <div class="wrap bar">
+    <a class="brand" href="/faculty">
+      <span class="mark"><%= tenant.shortName %></span>
+      <span>
+        <strong><%= tenant.name %></strong>
+        <small>Staff · <%= roleLabels.join(' · ') %></small>
+      </span>
+    </a>
+    <form class="switcher" action="/logout" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label><%= staff.name %></label>
+      <button class="btn ghost" type="submit">Sign out</button>
+    </form>
+  </div>
+
+  <%
+  // Pass 3 of the design: an entry surface exists only where this principal is authorized.
+  // The server re-checks every one of these on POST — hiding a tab is a courtesy, never the control.
+  %>
+  <nav class="wrap tabs">
+    <a href="/faculty" class="<%= nav === 'home' ? 'on' : '' %>">Home</a>
+    <a href="/faculty/tasks" class="<%= nav === 'tasks' ? 'on' : '' %>">
+      My Tasks<% if (pending > 0) { %><span class="pill"><%= pending %></span><% } %></a>
+    <a href="/faculty/students" class="<%= nav === 'students' ? 'on' : '' %>">Students</a>
+    <% if (canLeave) { %><a href="/faculty/leave" class="<%= nav === 'leave' ? 'on' : '' %>">Leave</a><% } %>
+    <% if (canInternship) { %><a href="/faculty/internship" class="<%= nav === 'internship' ? 'on' : '' %>">Internship</a><% } %>
+    <% if (canAuthor) { %><a href="/faculty/attendance" class="<%= nav === 'attendance' ? 'on' : '' %>">Attendance</a><% } %>
+    <% if (canAuthor) { %><a href="/faculty/marks" class="<%= nav === 'marks' ? 'on' : '' %>">Marks &amp; Results</a><% } %>
+    <a href="/faculty/notifications" class="<%= nav === 'notifications' ? 'on' : '' %>">Notifications</a>
+  </nav>
+</header>

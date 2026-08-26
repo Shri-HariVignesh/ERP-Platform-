@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('head', { title: 'Marks & Results' }) %></head>
+<body>
+<%- include('header') %>
+<main class="wrap">
+  <%- include('flash') %>
+
+  <section class="hero">
+    <h1>Marks &amp; Results</h1>
+    <p class="sub">Save a draft as often as you like — a draft is stored and audited but is
+      invisible to the student. Finalizing publishes it. The semester SGPA is only republished
+      once every subject taught to this class that semester has been finalized, so a
+      half-entered semester can never overwrite a published result.</p>
+  </section>
+
+  <%- include('picker', { pickerAction: '/faculty/marks', pickerExtra: 'none' }) %>
+
+  <form action="/faculty/marks" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="clazz" value="<%= clazz.token() %>">
+    <input type="hidden" name="subject" value="<%= subject %>">
+
+    <table class="tbl register">
+      <thead>
+        <tr>
+          <th>Roll no</th><th>Name</th>
+          <th>Internal / <%= maxInternal %></th>
+          <th>External / <%= maxExternal %></th>
+          <th>Total</th><th>Grade</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% roster.forEach(function(s) { %>
+        <% var m = current[s.id]; %>
+        <tr>
+          <td><%= s.rollNo %></td>
+          <td><%= s.name %></td>
+          <td><input type="number" min="0" max="<%= maxInternal %>" name="internal_<%= s.id %>" value="<%= m ? m.internal : '' %>"></td>
+          <td><input type="number" min="0" max="<%= maxExternal %>" name="external_<%= s.id %>" value="<%= m ? m.external : '' %>"></td>
+          <td><%= m ? m.total : '—' %></td>
+          <td><%= m ? m.grade : '—' %></td>
+          <td>
+            <% if (!m) { %><span class="muted">Not entered</span>
+            <% } else if (m.finalized) { %><span class="badge success">Finalized</span>
+            <% } else { %><span class="badge pending">Draft · hidden from student</span><% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <p class="hint">Finalizing is one-way. A published mark cannot be quietly returned to draft
+      — a correction is a new finalized value, and it audits as one.</p>
+
+    <div class="act row">
+      <button class="btn ghost" type="submit" name="action" value="draft">Save draft</button>
+      <button class="btn success" type="submit" name="action" value="finalize">Finalize</button>
+    </div>
+  </form>
+</main>
+</body>
+</html>

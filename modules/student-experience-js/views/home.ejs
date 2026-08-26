@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Home' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Hello, <%= student.name.split(' ')[0] %>.</h1>
+    <p class="sub"><%= student.program %> · Semester <%= student.semester %> · Section <%= student.section %> · <%= student.rollNo %></p>
+  </section>
+
+  <% if (banner) { %>
+  <section class="banner">
+    <div>
+      <span class="kind">Needs your attention</span>
+      <h3><%= banner.title %></h3>
+      <p><%= banner.headline %></p>
+    </div>
+    <% if (banner.studentAction) { %>
+    <form action="/actions/<%= banner.id %>" method="post" class="act">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="event" value="<%= banner.studentAction.event %>">
+      <input type="hidden" name="back" value="/">
+      <% if (banner.studentAction.inputLabel) { %>
+      <input type="text" name="input" required placeholder="<%= banner.studentAction.inputLabel %>">
+      <% } %>
+      <button class="btn action"><%= banner.studentAction.label %></button>
+    </form>
+    <% } else { %>
+    <a class="btn ghost" href="/requests">Track it</a>
+    <% } %>
+  </section>
+  <% } else { %>
+  <p class="banner calm">Nothing is waiting on you. Every request is closed.</p>
+  <% } %>
+
+  <section class="quick">
+    <a href="/leave"><strong>Apply Leave</strong><span>Auto-validated, then routed</span></a>
+    <a href="/documents"><strong>Request Document</strong><span>Bonafide issues instantly</span></a>
+    <a href="/internship"><strong>Submit Internship</strong><span>Verified, then on your record</span></a>
+    <a href="/grievance"><strong>Raise Grievance</strong><span>Auto-assigned to a desk</span></a>
+  </section>
+
+  <section class="stats">
+    <div><span>Attendance</span><strong><%= attendancePct %>%</strong></div>
+    <div><span>Open requests</span><strong><%= openCount %></strong></div>
+    <div><span>Leave balance</span><strong><%= student.leaveBalance %> days</strong></div>
+    <div><span>Fee dues</span><strong>₹<%= student.feeDues %></strong></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Recent requests</h2><a href="/requests">See all →</a></div>
+    <div class="cards">
+      <% recent.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/' }) %><% }) %>
+    </div>
+  </section>
+</main>
+</body>
+</html>

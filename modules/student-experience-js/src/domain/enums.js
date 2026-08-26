@@ -1,0 +1,107 @@
+// THE domain enums, transcribed 1:1 from the Java `domain` package. Plain frozen objects
+// stand in for Java enums: `Actor.SYSTEM` here is `Actor.SYSTEM` there, same string identity.
+
+export const RequestType = Object.freeze({
+  LEAVE: 'LEAVE',
+  INTERNSHIP: 'INTERNSHIP',
+  DOCUMENT: 'DOCUMENT',
+  GRIEVANCE: 'GRIEVANCE',
+});
+
+/** One enum for one table. The matrix is keyed by (type, state), so states may be shared. */
+export const RequestState = Object.freeze({
+  // shared
+  SUBMITTED: 'SUBMITTED', REJECTED: 'REJECTED',
+  // LEAVE
+  FACULTY_PENDING: 'FACULTY_PENDING', HOD_PENDING: 'HOD_PENDING',
+  ATTENDANCE_MUTATED: 'ATTENDANCE_MUTATED', NOTIFIED: 'NOTIFIED',
+  // INTERNSHIP
+  FACULTY_VERIFICATION: 'FACULTY_VERIFICATION', INSTITUTION_APPROVAL: 'INSTITUTION_APPROVAL',
+  ACADEMIC_RECORD_MUTATED: 'ACADEMIC_RECORD_MUTATED',
+  VERIFICATION_ID_GENERATED: 'VERIFICATION_ID_GENERATED', RETURNED: 'RETURNED',
+  // DOCUMENT
+  APPROVAL: 'APPROVAL', DOCUMENT_GENERATED: 'DOCUMENT_GENERATED',
+  // GRIEVANCE
+  ASSIGNED: 'ASSIGNED', UNDER_REVIEW: 'UNDER_REVIEW', RESOLVED: 'RESOLVED',
+});
+
+const ACTOR_DISPLAY = {
+  SYSTEM: 'CampusOS',
+  STUDENT: 'Student',
+  FACULTY: 'Class Advisor',
+  HOD: 'Head of Department',
+  INSTITUTION: 'Institution',
+  OFFICE: 'Examination Office',
+};
+
+export const Actor = Object.freeze({
+  SYSTEM: 'SYSTEM', STUDENT: 'STUDENT', FACULTY: 'FACULTY',
+  HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
+  display: (a) => ACTOR_DISPLAY[a],
+});
+
+export const Event = Object.freeze({
+  AUTO_VALIDATE: 'AUTO_VALIDATE', AUTO_CHECK: 'AUTO_CHECK', AUTO_ELIGIBILITY: 'AUTO_ELIGIBILITY',
+  AUTO_ASSIGN: 'AUTO_ASSIGN', APPLY: 'APPLY', WRITE_RECORD: 'WRITE_RECORD',
+  APPROVE: 'APPROVE', REJECT: 'REJECT', VERIFY: 'VERIFY', RETURN: 'RETURN',
+  RESUBMIT: 'RESUBMIT', START_REVIEW: 'START_REVIEW', RESOLVE: 'RESOLVE',
+});
+
+export const SideEffect = Object.freeze({
+  VALIDATE_LEAVE: 'VALIDATE_LEAVE',
+  MUTATE_ATTENDANCE: 'MUTATE_ATTENDANCE',
+  CHECK_CERTIFICATE: 'CHECK_CERTIFICATE',
+  WRITE_ACADEMIC_RECORD: 'WRITE_ACADEMIC_RECORD',
+  GENERATE_VERIFICATION_ID: 'GENERATE_VERIFICATION_ID',
+  PUBLISH_CERT_TO_DOCUMENTS: 'PUBLISH_CERT_TO_DOCUMENTS',
+  RUN_ELIGIBILITY: 'RUN_ELIGIBILITY',
+  GENERATE_DOCUMENT: 'GENERATE_DOCUMENT',
+  NOTIFY: 'NOTIFY',
+  NOTIFY_REJECTION: 'NOTIFY_REJECTION',
+});
+
+const DOC_DISPLAY = {
+  BONAFIDE: 'Bonafide Certificate',
+  HALL_TICKET: 'Hall Ticket',
+  FEE_RECEIPT: 'Fee Receipt',
+  TRANSCRIPT: 'Transcript',
+  CONDUCT_CERTIFICATE: 'Conduct Certificate',
+  INTERNSHIP_VERIFICATION: 'Internship Verification Certificate',
+};
+
+export const DocType = Object.freeze({
+  BONAFIDE: 'BONAFIDE', HALL_TICKET: 'HALL_TICKET', FEE_RECEIPT: 'FEE_RECEIPT',
+  TRANSCRIPT: 'TRANSCRIPT', CONDUCT_CERTIFICATE: 'CONDUCT_CERTIFICATE',
+  INTERNSHIP_VERIFICATION: 'INTERNSHIP_VERIFICATION',
+  display: (d) => DOC_DISPLAY[d],
+  values: () => ['BONAFIDE', 'HALL_TICKET', 'FEE_RECEIPT', 'TRANSCRIPT', 'CONDUCT_CERTIFICATE',
+    'INTERNSHIP_VERIFICATION'],
+});
+
+export const AttendanceStatus = Object.freeze({
+  PRESENT: 'PRESENT', ABSENT: 'ABSENT', APPROVED_LEAVE: 'APPROVED_LEAVE', SCHEDULED: 'SCHEDULED',
+});
+
+export const MarkStatus = Object.freeze({ DRAFT: 'DRAFT', FINALIZED: 'FINALIZED' });
+
+const STAFF_ROLE_ACTOR = { FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE' };
+const STAFF_ROLE_DISPLAY = {
+  FACULTY: 'Faculty', HOD: 'Head of Department', INSTITUTION: 'Institution', OFFICE: 'Examination Office',
+};
+
+/** Each constant maps to EXACTLY ONE Actor of the frozen matrix. Never STUDENT, never SYSTEM. */
+export const StaffRole = Object.freeze({
+  FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
+  actor: (r) => STAFF_ROLE_ACTOR[r],
+  display: (r) => STAFF_ROLE_DISPLAY[r],
+});
+
+export const AcademicAuditKind = Object.freeze({
+  ATTENDANCE: 'ATTENDANCE', MARKS_DRAFT: 'MARKS_DRAFT', MARKS_FINALIZED: 'MARKS_FINALIZED',
+});
+
+export const LeaveType = Object.freeze({ MEDICAL: 'MEDICAL', PERSONAL: 'PERSONAL', EVENT: 'EVENT' });
+
+export const GrievanceCategory = Object.freeze({
+  ACADEMIC: 'ACADEMIC', HOSTEL: 'HOSTEL', EXAM: 'EXAM', FEES: 'FEES', OTHER: 'OTHER',
+});

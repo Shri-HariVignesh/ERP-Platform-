@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'My Requests' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>My Requests</h1>
+    <p class="sub">Every request type, one tracker, one timeline. All four workflows are rows in
+      the same table and render through the same card.</p>
+  </section>
+
+  <nav class="filters">
+    <a href="/requests" class="<%= filter === 'ALL' ? 'on' : '' %>">All</a>
+    <% types.forEach(function(t) { %>
+    <a href="/requests?filter=<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= DisplayLabels.type(t) %></a>
+    <% }) %>
+  </nav>
+
+  <div class="cards">
+    <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/requests' }) %><% }) %>
+  </div>
+  <% if (cards.length === 0) { %><p class="empty">No requests of this type yet.</p><% } %>
+</main>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<%
+/*
+  THE STAFF INBOX ROW. Embeds the SAME fragments/card the student sees — same timeline, same
+  trail, same DisplayLabels — and adds only who it is about and the actions THIS principal may
+  take. The action form posts an event, a note, a redirect target. No actor: the server derives
+  it from the session and the frozen matrix.
+*/
+%>
+<article class="task">
+  <div class="who-for">
+    <a href="/faculty/students/<%= t.studentId %>"><%= t.studentName %></a>
+    <span><%= t.rollNo %> · <%= t.className %></span>
+  </div>
+
+  <%- include('../fragments/card', { c: t.card, back: back }) %>
+
+  <% if (t.actionable()) { %>
+  <div class="staff-actions">
+    <% t.actions.forEach(function(a) { %>
+    <form class="act" action="/faculty/requests/<%= t.card.id %>/act" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="event" value="<%= a.event %>">
+      <input type="hidden" name="back" value="<%= back %>">
+      <% if (a.requiresNote) { %>
+      <textarea name="note" required placeholder="Reason (required — the student reads this)"></textarea>
+      <% } %>
+      <button type="submit" class="btn <%= a.tone %>"><%= a.label %></button>
+    </form>
+    <% }) %>
+  </div>
+  <% } else { %>
+  <p class="empty small">Waiting on another desk — nothing for you to do here.</p>
+  <% } %>
+</article>

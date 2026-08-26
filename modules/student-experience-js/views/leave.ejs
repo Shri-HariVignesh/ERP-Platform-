@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Leave' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Leave</h1>
+    <p class="sub">Submit once. The system validates dates and your balance, then routes to your
+      advisor and HOD. On approval it writes your attendance itself — nobody retypes anything.</p>
+  </section>
+
+  <form class="panel" action="/leave" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2>Apply for leave</h2>
+    <% if (errors && errors.length) { %><p class="errs"><% errors.forEach(function(e) { %><span><%= e %></span><% }) %></p><% } %>
+
+    <div class="grid">
+      <label>Type
+        <select name="leaveType">
+          <% leaveTypes.forEach(function(t) { %>
+          <option value="<%= t %>" <%= form.leaveType === t ? 'selected' : '' %>><%= DisplayLabels.leaveType(t) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>From <input type="date" name="from" value="<%= form.from %>" required></label>
+      <label>To <input type="date" name="to" value="<%= form.to %>" required></label>
+    </div>
+    <label>Reason <input type="text" name="reason" value="<%= form.reason %>" required placeholder="Why do you need this leave?"></label>
+
+    <p class="hint">Two decisions: the dates, and the reason. Duration, leave balance and attendance
+      impact are computed for you.</p>
+    <button class="btn action" type="submit">Submit leave request</button>
+  </form>
+
+  <div class="cards">
+    <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/leave' }) %><% }) %>
+  </div>
+  <% if (cards.length === 0) { %><p class="empty">No leave requests yet.</p><% } %>
+</main>
+</body>
+</html>

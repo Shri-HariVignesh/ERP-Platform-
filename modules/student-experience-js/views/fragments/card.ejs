@@ -1,0 +1,60 @@
+<%
+// THE shared request card. Consumes only the normalized RequestCard. There is no branch on
+// request type anywhere in this file — that is the point.
+%>
+<article class="card">
+  <div class="card-top">
+    <div>
+      <span class="kind"><%= c.typeLabel %></span>
+      <h3><%= c.title %></h3>
+      <p class="sub"><%= c.subtitle %></p>
+    </div>
+    <span class="badge <%= c.badgeTone %>"><%= c.stateLabel %></span>
+  </div>
+
+  <p class="headline"><%= c.headline %></p>
+
+  <%- include('timeline', { steps: c.steps }) %>
+
+  <% if (c.artifacts.length > 0) { %>
+  <ul class="artifacts">
+    <% c.artifacts.forEach(function(a) { %>
+    <li>
+      <span><%= a.label %></span>
+      <% if (a.href) { %><a href="<%= a.href %>"><%= a.value %></a><% } else { %><strong><%= a.value %></strong><% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+
+  <% if (c.studentAction) { %>
+  <form class="act student" action="/actions/<%= c.id %>" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="event" value="<%= c.studentAction.event %>">
+    <input type="hidden" name="back" value="<%= back %>">
+    <% if (c.studentAction.inputLabel) { %>
+    <input type="text" name="input" required placeholder="<%= c.studentAction.inputLabel %>">
+    <% } %>
+    <% if (c.studentAction.requiresNote) { %>
+    <textarea name="note" required placeholder="Add a note"></textarea>
+    <% } %>
+    <button type="submit" class="btn <%= c.studentAction.tone %>"><%= c.studentAction.label %></button>
+  </form>
+  <% } %>
+
+  <details class="trail">
+    <summary>See what happened <span>· <%= c.trail.length %> steps · updated <%= c.updatedAt %></span></summary>
+    <ol class="hist">
+      <% c.trail.forEach(function(h) { %>
+      <li>
+        <span class="step"><%= h.transition %></span>
+        <span class="who"><%= h.actor %></span>
+        <span class="when"><%= h.at %></span>
+        <% if (h.hasNote) { %><p class="note">&ldquo;<%= h.note %>&rdquo;</p><% } %>
+        <% if (h.hasEffects) { %><p class="fx"><%= h.effects %></p><% } %>
+        <% if (h.hasProof) { %><p class="proof"><%= h.proof %></p><% } %>
+      </li>
+      <% }) %>
+    </ol>
+  </details>
+</article>

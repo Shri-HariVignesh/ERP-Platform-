@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusOS · Staff sign in</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="loginpage">
+<main class="loginbox">
+  <h1>CampusOS</h1>
+  <p class="sub">Staff sign in</p>
+
+  <% if (typeof error !== 'undefined' && error) { %><p class="flash bad"><%= error %></p><% } %>
+  <% if (typeof flash !== 'undefined' && flash) { %><p class="flash ok"><%= flash %></p><% } %>
+
+  <form action="/login" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label for="u">Username</label>
+    <input id="u" name="username" type="text" autocomplete="username" required autofocus>
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+    <button class="btn success" type="submit">Sign in</button>
+  </form>
+
+  <details class="trail demo">
+    <summary>Demo accounts — students</summary>
+    <ul class="hist">
+      <li><span class="step">snit21cs042</span><span class="who">Hari Prasad · SNIT (CSE, Sem 5)</span></li>
+      <li><span class="step">snit21cs051</span><span class="who">Divya Rajan · SNIT (CSE, Sem 5)</span></li>
+      <li><span class="step">snit21ec017</span><span class="who">Nikhil Varma · SNIT (ECE, Sem 5)</span></li>
+      <li><span class="step">ace22ec118</span><span class="who">Meera Nair · ACE (other tenant)</span></li>
+    </ul>
+  </details>
+
+  <details class="trail demo">
+    <summary>Demo accounts — staff</summary>
+    <ul class="hist">
+      <li><span class="step">anjali.menon</span><span class="who">Faculty · CSE Sem 5 A</span></li>
+      <li><span class="step">suresh.kumar</span><span class="who">Faculty · CSE Sem 5 A (other subjects)</span></li>
+      <li><span class="step">krishnakumar</span><span class="who">HOD + Faculty · CSE</span></li>
+      <li><span class="step">suresh.babu</span><span class="who">Faculty · ECE (other department)</span></li>
+      <li><span class="step">registrar.snit</span><span class="who">Institution</span></li>
+      <li><span class="step">exam.office</span><span class="who">Examination Office</span></li>
+      <li><span class="step">latha.iyer</span><span class="who">HOD + Faculty · ACE (other tenant)</span></li>
+    </ul>
+    <p class="fineprint">Password for all demo accounts: <code>campus123</code></p>
+  </details>
+
+  <p class="fineprint">A student username is their roll number, lower-case.</p>
+</main>
+</body>
+</html>

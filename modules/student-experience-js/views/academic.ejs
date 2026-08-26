@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Academic' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Academic</h1>
+    <p class="sub">Read-only. Everything here is written by workflows, never typed in —
+      the attendance figure moves when leave is approved, the internships arrive from verification.</p>
+  </section>
+
+  <section class="stats big">
+    <div>
+      <span>Attendance</span>
+      <strong><%= attendancePct %>%</strong>
+      <small><%= approvedLeaveDays %> day(s) counted as approved leave</small>
+    </div>
+    <div>
+      <span>CGPA</span>
+      <strong><%= cgpa %></strong>
+      <small><%= results.length %> semesters published</small>
+    </div>
+    <div>
+      <span>Hall ticket</span>
+      <% if (hallTicket) { %><strong>Released</strong><small><%= hallTicket.serialNo %></small>
+      <% } else { %><strong class="muted">Not issued</strong><small>Request it under Documents</small><% } %>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Semester results</h2></div>
+    <table class="tbl">
+      <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th></tr></thead>
+      <tbody>
+        <% results.forEach(function(r) { %>
+        <tr><td>Semester <%= r.semester %></td><td><%= r.sgpa %></td><td><%= r.credits %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="head"><h2>Subject marks</h2></div>
+    <% if (marks.length > 0) { %>
+    <table class="tbl">
+      <thead><tr><th>Sem</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Credits</th></tr></thead>
+      <tbody>
+        <% marks.forEach(function(m) { %>
+        <tr>
+          <td><%= m.semester %></td>
+          <td><%= m.subjectCode %> · <%= m.subjectName %></td>
+          <td><%= m.internal %></td><td><%= m.external %></td><td><%= m.total %></td>
+          <td><%= m.grade %></td><td><%= m.credits %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } else { %>
+    <p class="empty">No subject marks published yet. Marks appear here once your faculty finalizes them.</p>
+    <% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Examination</h2></div>
+    <% if (term) { %>
+    <div class="panel flat">
+      <strong><%= term.name %></strong>
+      <p><%= term.startDate %> → <%= term.endDate %></p>
+      <% if (hallTicket) { %>
+      <p>Hall ticket <code><%= hallTicket.serialNo %></code> <a href="/documents/<%= hallTicket.id %>/download">Download</a></p>
+      <% } %>
+    </div>
+    <% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Verified academic record</h2></div>
+    <% if (records.length > 0) { %>
+    <ul class="record">
+      <% records.forEach(function(r) { %>
+      <li>
+        <div><strong><%= r.title %></strong><p><%= r.subtitle %></p></div>
+        <div class="right">
+          <span><%= r.credits %> credits</span>
+          <% if (r.verifyId) { %><a href="/verify/<%= r.verifyId %>"><%= r.verifyId %></a><% } %>
+        </div>
+      </li>
+      <% }) %>
+    </ul>
+    <% } else { %>
+    <p class="empty">Nothing recorded yet. Verified internships land here.</p>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>

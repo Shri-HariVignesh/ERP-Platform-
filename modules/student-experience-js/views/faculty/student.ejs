@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('head', { title: s.name }) %></head>
+<body>
+<%- include('header') %>
+<main class="wrap">
+  <%- include('flash') %>
+
+  <section class="hero">
+    <p class="fineprint"><a href="/faculty/students">← Students</a></p>
+    <h1><%= s.name %></h1>
+    <p class="sub"><%= s.rollNo %> · <%= s.program %> · <%= className %></p>
+  </section>
+
+  <section class="stats big">
+    <div>
+      <span>Attendance</span>
+      <strong><%= attendancePct !== null ? attendancePct + '%' : '—' %></strong>
+      <small><%= approvedLeaveDays %> day(s) approved leave</small>
+    </div>
+    <div>
+      <span>CGPA</span>
+      <strong><%= cgpa %></strong>
+      <small><%= results.length %> semesters published</small>
+    </div>
+    <div>
+      <span>Leave balance</span>
+      <strong><%= s.leaveBalance %> days</strong>
+      <small><%= s.active ? 'Enrolment active' : 'Not active' %></small>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Results &amp; marks</h2></div>
+    <table class="tbl">
+      <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th></tr></thead>
+      <tbody>
+        <% results.forEach(function(r) { %>
+        <tr><td>Semester <%= r.semester %></td><td><%= r.sgpa %></td><td><%= r.credits %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% if (marks.length > 0) { %>
+    <table class="tbl">
+      <thead><tr><th>Sem</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th></tr></thead>
+      <tbody>
+        <% marks.forEach(function(m) { %>
+        <tr>
+          <td><%= m.semester %></td><td><%= m.subjectCode %> · <%= m.subjectName %></td>
+          <td><%= m.internal %></td><td><%= m.external %></td><td><%= m.total %></td><td><%= m.grade %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } else { %><p class="empty">No finalized subject marks yet.</p><% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Verified academic record</h2></div>
+    <% if (records.length > 0) { %>
+    <ul class="record">
+      <% records.forEach(function(r) { %>
+      <li><div><strong><%= r.title %></strong><p><%= r.subtitle %></p></div>
+        <div class="right"><span><%= r.credits %> credits</span></div></li>
+      <% }) %>
+    </ul>
+    <% } else { %><p class="empty">Nothing recorded yet.</p><% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Documents issued</h2></div>
+    <% if (documents.length > 0) { %>
+    <ul class="record">
+      <% documents.forEach(function(d) { %>
+      <li><div><strong><%= d.title %></strong><p><%= d.serialNo %></p></div></li>
+      <% }) %>
+    </ul>
+    <% } else { %><p class="empty">No documents issued.</p><% } %>
+  </section>
+
+  <section>
+    <div class="head"><h2>Submitted requests</h2></div>
+    <div class="cards">
+      <% cards.forEach(function(c) { %><%- include('../fragments/card', { c: c, back: '/faculty/students' }) %><% }) %>
+    </div>
+    <% if (cards.length === 0) { %><p class="empty">This student has not submitted anything.</p><% } %>
+  </section>
+</main>
+</body>
+</html>

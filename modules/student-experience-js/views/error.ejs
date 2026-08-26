@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusOS · <%= status %> <%= error %></title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="loginpage">
+<main class="loginbox">
+  <h1><%= status %> · <%= error %></h1>
+  <p class="sub"><%= (typeof message !== 'undefined' && message) ? message : 'Something went wrong handling that request.' %></p>
+  <p class="fineprint"><a href="/">← Student portal</a> &nbsp;·&nbsp; <a href="/login">Staff sign in</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<ol class="timeline">
+  <% steps.forEach(function(s) { %>
+  <li class="st <%= s.status %>">
+    <span class="dot"></span>
+    <span class="lbl"><%= s.label %></span>
+    <% if (s.status === 'skipped') { %><span class="tag">skipped by automation</span><% } %>
+  </li>
+  <% }) %>
+</ol>

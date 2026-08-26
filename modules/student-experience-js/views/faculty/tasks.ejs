@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('head', { title: 'My Tasks' }) %></head>
+<body>
+<%- include('header') %>
+<main class="wrap">
+  <%- include('flash') %>
+
+  <section class="hero">
+    <h1>My Tasks</h1>
+    <p class="sub">Every request in your scope whose current stage is waiting on a role you
+      hold. One inbox for leave approvals, internship verification, the grievance desk and any
+      office or institution work — the workflow decides, not a per-form screen.</p>
+  </section>
+
+  <form class="filters" action="/faculty/tasks" method="get">
+    <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>">All</button>
+    <% types.forEach(function(t) { %>
+    <button name="filter" value="<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= t %></button>
+    <% }) %>
+  </form>
+
+  <div class="cards">
+    <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: back }) %><% }) %>
+  </div>
+  <% if (tasks.length === 0) { %><p class="empty">Nothing here. Every request in your scope has moved on.</p><% } %>
+</main>
+</body>
+</html>

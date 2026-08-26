@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('head', { title: workflow }) %></head>
+<body>
+<%- include('header') %>
+<main class="wrap">
+  <%- include('flash') %>
+
+  <section class="hero">
+    <h1><%= workflow %></h1>
+    <p class="sub">The same inbox, narrowed to one workflow. The buttons come from the frozen
+      transition matrix intersected with your roles, so you are only ever offered a move that
+      is genuinely yours to make at this stage.</p>
+  </section>
+
+  <div class="cards">
+    <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: back }) %><% }) %>
+  </div>
+  <% if (tasks.length === 0) { %><p class="empty">No <%= workflow.toLowerCase() %> request is waiting on you.</p><% } %>
+</main>
+</body>
+</html>

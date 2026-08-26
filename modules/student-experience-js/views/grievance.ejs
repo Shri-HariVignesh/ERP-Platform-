@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Grievance' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Grievance</h1>
+    <p class="sub">Routed to the right desk by category the moment you submit — no register,
+      no asking around for whose problem it is.</p>
+  </section>
+
+  <form class="panel" action="/grievance" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2>Raise a grievance</h2>
+    <% if (errors && errors.length) { %><p class="errs"><% errors.forEach(function(e) { %><span><%= e %></span><% }) %></p><% } %>
+
+    <div class="grid">
+      <label>Category
+        <select name="category">
+          <% categories.forEach(function(cat) { %>
+          <option value="<%= cat %>" <%= form.category === cat ? 'selected' : '' %>><%= DisplayLabels.category(cat) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" name="anonymous" <%= form.anonymous ? 'checked' : '' %>> Submit anonymously
+      </label>
+    </div>
+    <label>Subject <input type="text" name="subject" value="<%= form.subject %>" required></label>
+    <label>What happened <textarea name="description" rows="4" required><%= form.description %></textarea></label>
+    <button class="btn action" type="submit">Submit grievance</button>
+  </form>
+
+  <div class="cards">
+    <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/grievance' }) %><% }) %>
+  </div>
+  <% if (cards.length === 0) { %><p class="empty">No grievances raised.</p><% } %>
+</main>
+</body>
+</html>

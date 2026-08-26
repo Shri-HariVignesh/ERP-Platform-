@@ -46,6 +46,7 @@ cd modules/student-experience && mvn test              # 74 tests
 | Module | Status | What it owns |
 |---|---|---|
 | `student-experience` | built | The seven student-facing views: Home, My Requests, Leave, Internship, Documents & Certificates, Academic, Grievance — all on one polymorphic request engine. |
+| `student-experience-js` | built | A JavaScript port of `student-experience` (Node/Express/EJS/better-sqlite3 in place of Spring Boot/Thymeleaf/H2). Same engine, same frozen contract, same views — no behaviour changed, added, or removed. |
 
 Everything else — staff dashboards, admissions, finance, HR, hostel, library, placements — is
 unclaimed. See [`docs/MODULES.md`](docs/MODULES.md) before starting one.

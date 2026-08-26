@@ -1,0 +1,28 @@
+<%
+/*
+  Class + subject picker, shared by Attendance and Marks. Built ONLY from this staff member's
+  own assignments. Submits with a real button rather than an onchange handler — the
+  Content-Security-Policy on every response is script-src 'none', so this has to work with no
+  JavaScript at all. `pickerAction` and `pickerExtra` ('date' | 'none') are passed by the caller.
+*/
+%>
+<form class="picker" action="<%= pickerAction %>" method="get">
+  <label>Class
+    <select name="clazz">
+      <% classes.forEach(function(c) { %>
+      <option value="<%= c.token() %>" <%= c.token() === clazz.token() ? 'selected' : '' %>><%= c.label() %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Subject
+    <select name="subject">
+      <% subjects.forEach(function(a) { %>
+      <option value="<%= a.subjectCode %>" <%= a.subjectCode === subject ? 'selected' : '' %>><%= a.subjectCode %> · <%= a.subjectName %></option>
+      <% }) %>
+    </select>
+  </label>
+  <% if (pickerExtra === 'date') { %>
+  <label>Date <input type="date" name="date" value="<%= date %>" max="<%= today %>"></label>
+  <% } %>
+  <button class="btn ghost" type="submit">Show</button>
+</form>

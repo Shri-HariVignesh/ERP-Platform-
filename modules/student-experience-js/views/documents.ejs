@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('fragments/head', { title: 'Documents' }) %></head>
+<body>
+<%- include('fragments/header') %>
+<main class="wrap">
+  <%- include('fragments/flash') %>
+
+  <section class="hero">
+    <h1>Documents &amp; Certificates</h1>
+    <p class="sub">A bonafide certificate only asks one question — "is this an active student?"
+      The system already knows the answer, so it issues instantly with zero human touches.
+      Everything carrying an attestation routes to the office.</p>
+  </section>
+
+  <form class="panel" action="/documents" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2>Request a document</h2>
+    <% if (errors && errors.length) { %><p class="errs"><% errors.forEach(function(e) { %><span><%= e %></span><% }) %></p><% } %>
+
+    <div class="grid">
+      <label>Document
+        <select name="docType">
+          <% docTypes.forEach(function(d) { %>
+          <option value="<%= d %>" <%= form.docType === d ? 'selected' : '' %>><%= DocType.display(d) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Copies <input type="number" min="1" max="3" name="copies" value="<%= form.copies %>"></label>
+    </div>
+    <label>Purpose <input type="text" name="purpose" value="<%= form.purpose %>" required placeholder="e.g. Passport application"></label>
+    <button class="btn action" type="submit">Request document</button>
+  </form>
+
+  <% if (issued.length > 0) { %>
+  <section>
+    <div class="head"><h2>Issued documents</h2></div>
+    <div class="issued">
+      <% issued.forEach(function(d) { %>
+      <details>
+        <summary>
+          <strong><%= d.title %></strong>
+          <code><%= d.serialNo %></code>
+          <a class="dl" href="/documents/<%= d.id %>/download">Download</a>
+        </summary>
+        <div class="docview"><%- d.html %></div>
+      </details>
+      <% }) %>
+    </div>
+  </section>
+  <% } %>
+
+  <div class="cards">
+    <% cards.forEach(function(c) { %><%- include('fragments/card', { c: c, back: '/documents' }) %><% }) %>
+  </div>
+  <% if (cards.length === 0) { %><p class="empty">No document requests yet.</p><% } %>
+</main>
+</body>
+</html>

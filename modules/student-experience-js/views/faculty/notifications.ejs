@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><%- include('head', { title: 'Notifications' }) %></head>
+<body>
+<%- include('header') %>
+<main class="wrap">
+  <%- include('flash') %>
+
+  <section class="hero">
+    <h1>Notifications</h1>
+    <p class="sub">In-app only. Nothing here is stored twice: a notification is the request
+      trail and the academic audit read from the staff side, so it cannot disagree with what
+      actually happened.</p>
+  </section>
+
+  <ul class="record notices">
+    <% notices.forEach(function(n) { %>
+    <li>
+      <div><span class="kind"><%= n.kind %></span><strong><%= n.title %></strong><p><%= n.detail %></p></div>
+      <div class="right">
+        <span><%= n.who %></span>
+        <span class="when"><%= n.at %></span>
+        <a href="<%= n.href %>">Open →</a>
+      </div>
+    </li>
+    <% }) %>
+  </ul>
+  <% if (notices.length === 0) { %><p class="empty">Nothing yet.</p><% } %>
+</main>
+</body>
+</html>

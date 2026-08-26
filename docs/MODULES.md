@@ -15,6 +15,15 @@ Declared non-goals of this module — each is a candidate module below, not a ga
 place: staff dashboards, finance, real authentication, real payments, real file storage,
 notification infrastructure.
 
+### `student-experience-js`
+A JavaScript port of `student-experience` — same engine, same frozen state contract, same
+views, same security posture. Node/Express/EJS/better-sqlite3 stand in for Spring
+Boot/Thymeleaf/H2; nothing at the behaviour level was changed, added, or removed.
+
+Documents: [README](../modules/student-experience-js/README.md). It shares the Java module's
+`docs/STATE_CONTRACT.md` and `docs/SECURITY.md` rather than duplicating them, since the frozen
+contract is identical by construction.
+
 ## Candidates
 
 None of these are started. Listed so the boundary is drawn before code exists.
