@@ -1,6 +1,7 @@
 import { RequestType, DocType } from '../domain/enums.js';
 import { IllegalArgumentException } from './RequestPayload.js';
 import { artifact } from './Artifact.js';
+import { I18n } from '../view/i18n.js';
 
 export class DocumentPayload {
   constructor() {
@@ -12,18 +13,18 @@ export class DocumentPayload {
 
   type() { return RequestType.DOCUMENT; }
 
-  title() { return DocType.display(this.docType); }
+  title(locale = 'en') { return DocType.display(this.docType, locale); }
 
-  subtitle() { return `${this.copies} copy/copies · ${this.purpose}`; }
+  subtitle(locale = 'en') { return `${this.copies} ${I18n.t(locale, 'payload.document.copySuffix')} · ${this.purpose}`; }
 
-  artifacts() {
+  artifacts(locale = 'en') {
     const out = [];
-    if (this.sys.serialNo !== null) out.push(artifact('SERIAL', 'Serial number', this.sys.serialNo));
+    if (this.sys.serialNo !== null) out.push(artifact('SERIAL', I18n.t(locale, 'artifact.serialNumber'), this.sys.serialNo));
     if (this.sys.verifyId !== null) {
-      out.push(artifact('VERIFY_ID', 'Verification ID', this.sys.verifyId, `/verify/${this.sys.verifyId}`));
+      out.push(artifact('VERIFY_ID', I18n.t(locale, 'artifact.verificationId'), this.sys.verifyId, `/verify/${this.sys.verifyId}`));
     }
     if (this.sys.documentId !== null) {
-      out.push(artifact('DOCUMENT', 'Generated document', 'View / download', `/documents/${this.sys.documentId}/download`));
+      out.push(artifact('DOCUMENT', I18n.t(locale, 'artifact.generatedDocument'), I18n.t(locale, 'artifact.viewDownload'), `/documents/${this.sys.documentId}/download`));
     }
     return out;
   }

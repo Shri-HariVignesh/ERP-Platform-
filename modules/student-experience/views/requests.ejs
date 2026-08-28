@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<%= locale %>">
 <head><%- include('fragments/head', { title: 'My Requests' }) %></head>
 <body>
 <%- include('fragments/header') %>
@@ -15,7 +15,7 @@
   <nav class="filters">
     <a href="/requests" class="<%= filter === 'ALL' ? 'on' : '' %>">All</a>
     <% types.forEach(function(t) { %>
-    <a href="/requests?filter=<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= DisplayLabels.type(t) %></a>
+    <a href="/requests?filter=<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= DisplayLabels.type(t, locale) %></a>
     <% }) %>
   </nav>
 

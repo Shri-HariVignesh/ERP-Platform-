@@ -51,7 +51,7 @@ function base(req, res, nav) {
 
 portalRoutes.get(['/', '/home'], requireStudent, (req, res) => {
   const s = base(req, res, 'home');
-  const all = RequestService.all(s);
+  const all = RequestService.all(s, res.locals.locale);
   res.locals.recent = all.slice(0, 5);
   res.locals.openCount = all.filter((c) => c.isOpen()).length;
   res.locals.banner = all.find((c) => c.studentAction !== null) ?? all.find((c) => c.isOpen()) ?? null;
@@ -70,7 +70,7 @@ portalRoutes.post('/anti-ragging/ack', requireStudent, (req, res) => {
 
 portalRoutes.get('/requests', requireStudent, (req, res) => {
   const s = base(req, res, 'requests');
-  let cards = RequestService.all(s);
+  let cards = RequestService.all(s, res.locals.locale);
   const filter = req.query.filter;
   if (filter && filter !== 'ALL') cards = cards.filter((c) => c.type === filter);
   res.locals.cards = cards;
@@ -85,7 +85,7 @@ portalRoutes.get('/leave', requireStudent, (req, res) => {
   const s = base(req, res, 'leave');
   res.locals.form = res.locals.form ?? { leaveType: LeaveType.PERSONAL, from: '', to: '', reason: '' };
   res.locals.errors = res.locals.errors ?? [];
-  res.locals.cards = RequestService.ofType(s, RequestType.LEAVE);
+  res.locals.cards = RequestService.ofType(s, RequestType.LEAVE, res.locals.locale);
   res.locals.leaveTypes = Object.values(LeaveType);
   res.render('leave');
 });
@@ -105,7 +105,7 @@ portalRoutes.post('/leave', requireStudent, (req, res) => {
   base(req, res, 'leave');
   res.locals.form = req.body;
   res.locals.errors = errors;
-  res.locals.cards = RequestService.ofType(s, RequestType.LEAVE);
+  res.locals.cards = RequestService.ofType(s, RequestType.LEAVE, res.locals.locale);
   res.locals.leaveTypes = Object.values(LeaveType);
   res.render('leave');
 });
@@ -116,7 +116,7 @@ portalRoutes.get('/internship', requireStudent, (req, res) => {
   const s = base(req, res, 'internship');
   res.locals.form = res.locals.form ?? { company: '', role: '', from: '', to: '', details: '', certificateFilename: '' };
   res.locals.errors = res.locals.errors ?? [];
-  res.locals.cards = RequestService.ofType(s, RequestType.INTERNSHIP);
+  res.locals.cards = RequestService.ofType(s, RequestType.INTERNSHIP, res.locals.locale);
   res.render('internship');
 });
 
@@ -135,7 +135,7 @@ portalRoutes.post('/internship', requireStudent, (req, res) => {
   base(req, res, 'internship');
   res.locals.form = req.body;
   res.locals.errors = errors;
-  res.locals.cards = RequestService.ofType(s, RequestType.INTERNSHIP);
+  res.locals.cards = RequestService.ofType(s, RequestType.INTERNSHIP, res.locals.locale);
   res.render('internship');
 });
 
@@ -145,7 +145,7 @@ portalRoutes.get('/documents', requireStudent, (req, res) => {
   const s = base(req, res, 'documents');
   res.locals.form = res.locals.form ?? { docType: DocType.BONAFIDE, purpose: '', copies: 1 };
   res.locals.errors = res.locals.errors ?? [];
-  res.locals.cards = RequestService.ofType(s, RequestType.DOCUMENT);
+  res.locals.cards = RequestService.ofType(s, RequestType.DOCUMENT, res.locals.locale);
   res.locals.issued = AcademicService.documents(s);
   res.locals.docTypes = STUDENT_REQUESTABLE;
   res.render('documents');
@@ -169,7 +169,7 @@ portalRoutes.post('/documents', requireStudent, (req, res) => {
   base(req, res, 'documents');
   res.locals.form = req.body;
   res.locals.errors = errors;
-  res.locals.cards = RequestService.ofType(s, RequestType.DOCUMENT);
+  res.locals.cards = RequestService.ofType(s, RequestType.DOCUMENT, res.locals.locale);
   res.locals.issued = AcademicService.documents(s);
   res.locals.docTypes = STUDENT_REQUESTABLE;
   res.render('documents');
@@ -210,7 +210,7 @@ portalRoutes.get('/grievance', requireStudent, (req, res) => {
   const s = base(req, res, 'grievance');
   res.locals.form = res.locals.form ?? { category: GrievanceCategory.ACADEMIC, subject: '', description: '', anonymous: false };
   res.locals.errors = res.locals.errors ?? [];
-  res.locals.cards = RequestService.ofType(s, RequestType.GRIEVANCE);
+  res.locals.cards = RequestService.ofType(s, RequestType.GRIEVANCE, res.locals.locale);
   res.locals.categories = Object.values(GrievanceCategory);
   res.render('grievance');
 });
@@ -226,7 +226,7 @@ portalRoutes.post('/grievance', requireStudent, (req, res) => {
   base(req, res, 'grievance');
   res.locals.form = req.body;
   res.locals.errors = errors;
-  res.locals.cards = RequestService.ofType(s, RequestType.GRIEVANCE);
+  res.locals.cards = RequestService.ofType(s, RequestType.GRIEVANCE, res.locals.locale);
   res.locals.categories = Object.values(GrievanceCategory);
   res.render('grievance');
 });

@@ -1,6 +1,7 @@
 import { RequestType } from '../domain/enums.js';
 import { parseDate, IllegalArgumentException } from './RequestPayload.js';
 import { artifact } from './Artifact.js';
+import { I18n } from '../view/i18n.js';
 
 export class InternshipPayload {
   constructor() {
@@ -18,21 +19,21 @@ export class InternshipPayload {
 
   title() { return `${this.role} · ${this.company}`; }
 
-  subtitle() {
-    return `${this.from} → ${this.to} · ${this.sys.weeks} week(s)`
-      + (this.certificateRef === null ? ' · no certificate' : ` · ${this.certificateRef.filename}`);
+  subtitle(locale = 'en') {
+    return `${this.from} → ${this.to} · ${this.sys.weeks} ${I18n.t(locale, 'unit.weeks')}`
+      + (this.certificateRef === null ? ` · ${I18n.t(locale, 'payload.internship.noCertificate')}` : ` · ${this.certificateRef.filename}`);
   }
 
-  artifacts() {
+  artifacts(locale = 'en') {
     const out = [];
     if (this.sys.verifyId !== null) {
-      out.push(artifact('VERIFY_ID', 'Verification ID', this.sys.verifyId, `/verify/${this.sys.verifyId}`));
+      out.push(artifact('VERIFY_ID', I18n.t(locale, 'artifact.verificationId'), this.sys.verifyId, `/verify/${this.sys.verifyId}`));
     }
     if (this.sys.credits !== null) {
-      out.push(artifact('CREDITS', 'Credits added to academic record', String(this.sys.credits)));
+      out.push(artifact('CREDITS', I18n.t(locale, 'artifact.creditsAdded'), String(this.sys.credits)));
     }
     if (this.sys.documentSerial !== null) {
-      out.push(artifact('SERIAL', 'Certificate published as', this.sys.documentSerial));
+      out.push(artifact('SERIAL', I18n.t(locale, 'artifact.certificatePublishedAs'), this.sys.documentSerial));
     }
     return out;
   }

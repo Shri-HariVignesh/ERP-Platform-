@@ -14,18 +14,18 @@ export const RequestService = {
 
   tenant(s) { return tenantRepo.findById(s.tenantId); },
 
-  all(s) {
-    return PresentationService.cards(s, requestRepo.findByTenantIdAndStudentIdOrderByCreatedAtDesc(s.tenantId, s.studentId));
+  all(s, locale = 'en') {
+    return PresentationService.cards(s, requestRepo.findByTenantIdAndStudentIdOrderByCreatedAtDesc(s.tenantId, s.studentId), locale);
   },
 
-  ofType(s, type) {
-    return PresentationService.cards(s, requestRepo.findByTenantIdAndStudentIdAndTypeOrderByCreatedAtDesc(s.tenantId, s.studentId, type));
+  ofType(s, type, locale = 'en') {
+    return PresentationService.cards(s, requestRepo.findByTenantIdAndStudentIdAndTypeOrderByCreatedAtDesc(s.tenantId, s.studentId, type), locale);
   },
 
-  card(s, id) {
+  card(s, id, locale = 'en') {
     const r = requestRepo.findByIdAndTenantIdAndStudentId(id, s.tenantId, s.studentId);
     if (!r) throw new IllegalTransitionException('request not visible in scope');
-    return PresentationService.card(s, r);
+    return PresentationService.card(s, r, locale);
   },
 
   raw(s, id) {

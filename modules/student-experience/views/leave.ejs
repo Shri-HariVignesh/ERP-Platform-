@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<%= locale %>">
 <head><%- include('fragments/head', { title: 'Leave' }) %></head>
 <body>
 <%- include('fragments/header') %>
@@ -21,7 +21,7 @@
       <label>Type
         <select name="leaveType">
           <% leaveTypes.forEach(function(t) { %>
-          <option value="<%= t %>" <%= form.leaveType === t ? 'selected' : '' %>><%= DisplayLabels.leaveType(t) %></option>
+          <option value="<%= t %>" <%= form.leaveType === t ? 'selected' : '' %>><%= DisplayLabels.leaveType(t, locale) %></option>
           <% }) %>
         </select>
       </label>
