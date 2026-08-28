@@ -1,0 +1,6 @@
+<%
+/* aria-live="polite" so a screen reader announces each toast (queued/undone/error) as it
+   appears, without the interruption a live="assertive" region would cause. public/js/tasks.js
+   owns everything inside — appends one .toast per action, removes it on dismiss/auto-expiry. */
+%>
+<div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>

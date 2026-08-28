@@ -1,9 +1,11 @@
 import { requestRepo } from '../repo/requestRepo.js';
 import { requestHistoryRepo } from '../repo/requestHistoryRepo.js';
 import { academicAuditRepo } from '../repo/academicAuditRepo.js';
+import { studentRepo } from '../repo/studentRepo.js';
 import { PresentationService } from './PresentationService.js';
 import { StaffScopeResolver } from './StaffScopeResolver.js';
 import { RequestStateMachine } from '../engine/RequestStateMachine.js';
+import { TransitionMatrix } from '../engine/TransitionMatrix.js';
 import { InboxStates } from './InboxStates.js';
 import { ClassKey } from './ClassKey.js';
 import { Scope } from './Scope.js';
@@ -13,6 +15,8 @@ import { GrievanceVisibility } from './GrievanceVisibility.js';
 import { PayloadCodec } from '../payload/PayloadCodec.js';
 import { RequestType } from '../domain/enums.js';
 import { I18n } from '../view/i18n.js';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function fmt(iso) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -145,7 +149,35 @@ export const FacultyService = {
     }
 
     const actor = StaffScopeResolver.actorFor(scope, r, event);
-    return RequestStateMachine.transition(new Scope(r.tenantId, r.studentId), requestId, event, actor, note);
+    return RequestStateMachine.transition(
+      new Scope(r.tenantId, r.studentId), requestId, event, actor, note, null, scope.staffId, scope.name);
+  },
+
+  /**
+   * "Recently closed" for the My Tasks page — everything THIS staff member personally moved
+   * to a still-terminal state in the last `sinceDays`. Personal, not role-level: request_history
+   * .actedByStaffId records the specific person, not just the Actor role they held (see
+   * schema.sql). Re-checks the request's CURRENT state is still terminal (not just the state the
+   * history row recorded at the time) because a RESOLVED grievance can later be escalated by the
+   * student — a since-reopened item must not show up as "closed."
+   */
+  recentlyClosed(scope, locale = 'en', limit = 20, sinceDays = 7) {
+    const rows = requestHistoryRepo.findByTenantIdAndActedByStaffIdOrderByAtDesc(scope.tenantId, scope.staffId);
+    const since = new Date(Date.now() - sinceDays * MS_PER_DAY).toISOString();
+    const seen = new Set();
+    const out = [];
+    for (const h of rows) {
+      if (h.at < since) break; // rows are DESC by `at` — nothing further back can qualify either
+      if (seen.has(h.requestId)) continue; // only the most recent action per request counts
+      seen.add(h.requestId);
+      const r = requestRepo.findByIdAndTenantIdAndStudentId(h.requestId, scope.tenantId, h.studentId);
+      if (!r || !TransitionMatrix.spec(r.type).isTerminal(r.state)) continue;
+      const student = studentRepo.findByIdAndTenantId(r.studentId, r.tenantId);
+      if (!student) continue;
+      out.push(taskFrom(scope, r, student, scope.canSee(student), locale));
+      if (out.length >= limit) break;
+    }
+    return out;
   },
 
   /** IN-APP ONLY, and derived — there is no notification table. */

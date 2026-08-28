@@ -36,5 +36,7 @@ export const RequestService = {
 
   create(s, type, payload) { return RequestStateMachine.create(s, type, payload); },
 
-  transition(s, id, e, a, note, patch) { return RequestStateMachine.transition(s, id, e, a, note, patch); },
+  transition(s, id, e, a, note, patch, actedByStaffId, actedByStaffName) {
+    return RequestStateMachine.transition(s, id, e, a, note, patch, actedByStaffId, actedByStaffName);
+  },
 };
