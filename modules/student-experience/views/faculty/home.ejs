@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<%= locale %>">
 <head><%- include('head', { title: 'Home' }) %></head>
 <body>
 <%- include('header') %>
@@ -24,7 +24,7 @@
   <section>
     <div class="head"><h2><%= t('section.waitingOnYou') %></h2><a href="/faculty/tasks"><%= t('action.seeAll') %> →</a></div>
     <div class="cards">
-      <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: '/faculty' }) %><% }) %>
+      <% tasks.forEach(function(task) { %><%- include('task', { task: task, back: '/faculty' }) %><% }) %>
     </div>
     <% if (tasks.length === 0) { %><p class="empty">Nothing is waiting on you right now.</p><% } %>
   </section>

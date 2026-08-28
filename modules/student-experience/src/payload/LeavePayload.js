@@ -1,6 +1,8 @@
 import { RequestType, LeaveType } from '../domain/enums.js';
 import { parseDate, epochDay, IllegalArgumentException } from './RequestPayload.js';
 import { artifact } from './Artifact.js';
+import { DisplayLabels } from '../view/DisplayLabels.js';
+import { I18n } from '../view/i18n.js';
 
 /** Typed DTO for LEAVE. */
 export class LeavePayload {
@@ -15,18 +17,19 @@ export class LeavePayload {
 
   type() { return RequestType.LEAVE; }
 
-  title() {
-    const t = this.leaveType;
-    return t.charAt(0) + t.slice(1).toLowerCase() + ' leave';
+  title(locale = 'en') {
+    return `${DisplayLabels.leaveType(this.leaveType, locale)} ${I18n.t(locale, 'payload.leave.suffix')}`;
   }
 
-  subtitle() { return `${this.from} → ${this.to} · ${this.sys.dayCount} day(s) · ${this.reason}`; }
+  subtitle(locale = 'en') {
+    return `${this.from} → ${this.to} · ${this.sys.dayCount} ${I18n.t(locale, 'unit.days')} · ${this.reason}`;
+  }
 
-  artifacts() {
+  artifacts(locale = 'en') {
     const out = [];
     if (this.sys.attendanceAfter !== null) {
-      out.push(artifact('ATTENDANCE', 'Attendance', `${this.sys.attendanceBefore}% → ${this.sys.attendanceAfter}%`));
-      out.push(artifact('DAYS', 'Days marked APPROVED_LEAVE', String(this.sys.datesMutated.length)));
+      out.push(artifact('ATTENDANCE', I18n.t(locale, 'artifact.attendance'), `${this.sys.attendanceBefore}% → ${this.sys.attendanceAfter}%`));
+      out.push(artifact('DAYS', I18n.t(locale, 'artifact.daysMarkedApprovedLeave'), String(this.sys.datesMutated.length)));
     }
     return out;
   }

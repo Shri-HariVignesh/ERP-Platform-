@@ -4,37 +4,41 @@
   trail, same DisplayLabels — and adds only who it is about and the actions THIS principal may
   take. The action form posts an event, a note, a redirect target. No actor: the server derives
   it from the session and the frozen matrix.
+
+  The row is passed in as `task`, never `t` — `t` is the global i18n translate helper
+  (res.locals.t, see server.js), and EJS includes inherit the parent's locals, so a local named
+  `t` here would shadow it for this template AND everything it includes (fragments/card.ejs).
 */
 %>
 <article class="task">
   <div class="who-for">
     <% /* A statutory committee's institution-wide grievance reach is not a grant to browse
           this student's full profile — canOpenProfile mirrors that same canSee() boundary. */ %>
-    <% if (t.canOpenProfile) { %>
-    <a href="/faculty/students/<%= t.studentId %>"><%= t.studentName %></a>
+    <% if (task.canOpenProfile) { %>
+    <a href="/faculty/students/<%= task.studentId %>"><%= task.studentName %></a>
     <% } else { %>
-    <strong><%= t.studentName %></strong>
+    <strong><%= task.studentName %></strong>
     <% } %>
-    <span><%= t.rollNo %> · <%= t.className %></span>
+    <span><%= task.rollNo %> · <%= task.className %></span>
   </div>
 
-  <%- include('../fragments/card', { c: t.card, back: back }) %>
+  <%- include('../fragments/card', { c: task.card, back: back }) %>
 
-  <% if (t.actionable()) { %>
+  <% if (task.actionable()) { %>
   <div class="staff-actions">
-    <% t.actions.forEach(function(a) { %>
-    <form class="act" action="/faculty/requests/<%= t.card.id %>/act" method="post">
+    <% task.actions.forEach(function(a) { %>
+    <form class="act" action="/faculty/requests/<%= task.card.id %>/act" method="post">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="event" value="<%= a.event %>">
       <input type="hidden" name="back" value="<%= back %>">
       <% if (a.requiresNote) { %>
-      <textarea name="note" required placeholder="Reason (required — the student reads this)"></textarea>
+      <textarea name="note" required placeholder="<%= t('task.reasonPlaceholder') %>"></textarea>
       <% } %>
       <button type="submit" class="btn <%= a.tone %>"><%= a.label %></button>
     </form>
     <% }) %>
   </div>
   <% } else { %>
-  <p class="empty small">Waiting on another desk — nothing for you to do here.</p>
+  <p class="empty small"><%= t('task.notActionable') %></p>
   <% } %>
 </article>

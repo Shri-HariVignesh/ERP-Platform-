@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<%= locale %>">
 <head><%- include('fragments/head', { title: 'Grievance' }) %></head>
 <body>
 <%- include('fragments/header') %>
@@ -21,7 +21,7 @@
       <label>Category
         <select name="category">
           <% categories.forEach(function(cat) { %>
-          <option value="<%= cat %>" <%= form.category === cat ? 'selected' : '' %>><%= DisplayLabels.category(cat) %></option>
+          <option value="<%= cat %>" <%= form.category === cat ? 'selected' : '' %>><%= DisplayLabels.category(cat, locale) %></option>
           <% }) %>
         </select>
       </label>

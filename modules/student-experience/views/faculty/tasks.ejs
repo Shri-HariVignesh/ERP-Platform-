@@ -1,29 +1,27 @@
 <!doctype html>
-<html lang="en">
-<head><%- include('head', { title: 'My Tasks' }) %></head>
+<html lang="<%= locale %>">
+<head><%- include('head', { title: t('nav.myTasks') }) %></head>
 <body>
 <%- include('header') %>
 <main class="wrap">
   <%- include('flash') %>
 
   <section class="hero">
-    <h1>My Tasks</h1>
-    <p class="sub">Every request in your scope whose current stage is waiting on a role you
-      hold. One inbox for leave approvals, internship verification, the grievance desk and any
-      office or institution work — the workflow decides, not a per-form screen.</p>
+    <h1><%= t('nav.myTasks') %></h1>
+    <p class="sub"><%= t('tasks.subtitle') %></p>
   </section>
 
   <form class="filters" action="/faculty/tasks" method="get">
-    <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>">All</button>
-    <% types.forEach(function(t) { %>
-    <button name="filter" value="<%= t %>" class="<%= filter === t ? 'on' : '' %>"><%= DisplayLabels.type(t) %></button>
+    <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>"><%= t('filter.all') %></button>
+    <% types.forEach(function(t2) { %>
+    <button name="filter" value="<%= t2 %>" class="<%= filter === t2 ? 'on' : '' %>"><%= DisplayLabels.type(t2, locale) %></button>
     <% }) %>
   </form>
 
   <div class="cards">
-    <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: back }) %><% }) %>
+    <% tasks.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
   </div>
-  <% if (tasks.length === 0) { %><p class="empty">Nothing here. Every request in your scope has moved on.</p><% } %>
+  <% if (tasks.length === 0) { %><p class="empty"><%= t('tasks.empty') %></p><% } %>
 </main>
 </body>
 </html>

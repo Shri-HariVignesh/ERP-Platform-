@@ -1,6 +1,7 @@
 import { RequestType, GrievanceCategory } from '../domain/enums.js';
 import { IllegalArgumentException } from './RequestPayload.js';
 import { DisplayLabels } from '../view/DisplayLabels.js';
+import { I18n } from '../view/i18n.js';
 
 export class GrievancePayload {
   constructor() {
@@ -15,9 +16,9 @@ export class GrievancePayload {
 
   title() { return this.subject; }
 
-  subtitle() {
-    return `${DisplayLabels.category(this.category)} · ${DisplayLabels.desk(this.category)}`
-      + (this.anonymous ? ' · anonymous' : '');
+  subtitle(locale = 'en') {
+    return `${DisplayLabels.category(this.category, locale)} · ${DisplayLabels.desk(this.category, locale)}`
+      + (this.anonymous ? ` · ${I18n.t(locale, 'payload.grievance.anonymous')}` : '');
   }
 
   artifacts() { return []; }
@@ -26,7 +27,7 @@ export class GrievancePayload {
    * The desk, not the generic matrix actor — "Hostel Warden Office", never "Class Advisor".
    * Derived from the category at render time; nothing in the engine maintains sys.routedTo.
    */
-  handledBy() { return DisplayLabels.desk(this.category); }
+  handledBy(locale = 'en') { return DisplayLabels.desk(this.category, locale); }
 
   validate() {
     if (!this.category || !Object.values(GrievanceCategory).includes(this.category)) {

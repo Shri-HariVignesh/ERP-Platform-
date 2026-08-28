@@ -36,14 +36,14 @@
     <input type="text" name="input" required placeholder="<%= c.studentAction.inputLabel %>">
     <% } %>
     <% if (c.studentAction.requiresNote) { %>
-    <textarea name="note" required placeholder="Add a note"></textarea>
+    <textarea name="note" required placeholder="<%= t('card.addNote') %>"></textarea>
     <% } %>
     <button type="submit" class="btn <%= c.studentAction.tone %>"><%= c.studentAction.label %></button>
   </form>
   <% } %>
 
   <details class="trail">
-    <summary>See what happened <span>· <%= c.trail.length %> steps · updated <%= c.updatedAt %></span></summary>
+    <summary><%= t('card.seeWhatHappened') %> <span>· <%= c.trail.length %> <%= t('card.steps') %> · <%= t('card.updated') %> <%= c.updatedAt %></span></summary>
     <ol class="hist">
       <% c.trail.forEach(function(h) { %>
       <li>

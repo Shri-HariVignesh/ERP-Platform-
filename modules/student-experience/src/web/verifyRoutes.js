@@ -25,7 +25,7 @@ verifyRoutes.get('/:verifyId', (req, res) => {
 
   const tenant = tenantRepo.findById(v.tenantId);
   const holder = studentRepo.findByIdAndTenantId(v.studentId, v.tenantId)?.name ?? '—';
-  const credential = DisplayLabels.credentialKind(v.kind);
+  const credential = DisplayLabels.credentialKind(v.kind, res.locals.locale);
   const issuedOn = new Date(v.issuedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const url = `${BASE_URL.replace(/\/+$/, '')}/verify/${verifyId}`;
   const publicDetail = DisplayLabels.publicDetail(v.detail);

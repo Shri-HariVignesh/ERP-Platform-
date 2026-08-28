@@ -12,6 +12,7 @@ import { DisplayLabels } from '../view/DisplayLabels.js';
 import { GrievanceVisibility } from './GrievanceVisibility.js';
 import { PayloadCodec } from '../payload/PayloadCodec.js';
 import { RequestType } from '../domain/enums.js';
+import { I18n } from '../view/i18n.js';
 
 function fmt(iso) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -34,12 +35,12 @@ function hiddenGrievanceIds(scope, studentIds) {
   return hidden;
 }
 
-function taskFrom(scope, r, student, canOpenProfile) {
+function taskFrom(scope, r, student, canOpenProfile, locale) {
   // The card is built through the student's OWN scope, so it is byte-for-byte the read model
   // the student sees — same timeline, same trail, same DisplayLabels.
-  const card = PresentationService.card(new Scope(r.tenantId, r.studentId), r);
+  const card = PresentationService.card(new Scope(r.tenantId, r.studentId), r, locale);
   const actions = StaffScopeResolver.permitted(scope, r)
-    .map((t) => ({ label: t.label, event: t.event, tone: t.tone, requiresNote: t.requiresNote }));
+    .map((t) => ({ label: DisplayLabels.actionLabel(t.label, locale), event: t.event, tone: t.tone, requiresNote: t.requiresNote }));
   return {
     card, studentId: student.id, studentName: student.name, rollNo: student.rollNo,
     className: ClassKey.of(student).label(), actions,
@@ -53,7 +54,7 @@ function taskFrom(scope, r, student, canOpenProfile) {
 
 export const FacultyService = {
   /** MY TASKS. Every request in this staff member's tenant awaiting an Actor they hold. */
-  inbox(scope, type = null) {
+  inbox(scope, type = null, locale = 'en') {
     const states = InboxStates.awaiting(scope.actors());
     if (states.length === 0) return [];
 
@@ -69,7 +70,7 @@ export const FacultyService = {
       for (const r of rows) {
         if (type !== null && r.type !== type) continue;
         if (hidden.has(r.id)) continue;
-        out.push(taskFrom(scope, r, byId.get(r.studentId), true));
+        out.push(taskFrom(scope, r, byId.get(r.studentId), true, locale));
       }
     }
 
@@ -92,7 +93,7 @@ export const FacultyService = {
           // seat; that already came through the roster branch above if it was ever theirs.
           if (!GrievanceVisibility.isConfidential(category)) continue;
           if (!GrievanceVisibility.visible(scope, category)) continue;
-          out.push(taskFrom(scope, r, wideById.get(r.studentId), scope.canSee(wideById.get(r.studentId))));
+          out.push(taskFrom(scope, r, wideById.get(r.studentId), scope.canSee(wideById.get(r.studentId)), locale));
         }
       }
     }
@@ -100,13 +101,13 @@ export const FacultyService = {
   },
 
   /** Everything about one student's requests, for the Students view. Read-only. */
-  requestsOf(scope, student) {
+  requestsOf(scope, student, locale = 'en') {
     if (!scope.canSee(student)) throw new StaffAccessException('student not in scope');
     const hidden = hiddenGrievanceIds(scope, [student.id]);
     const visible = requestRepo.findByTenantIdAndStudentIdOrderByCreatedAtDesc(student.tenantId, student.id)
       .filter((r) => !hidden.has(r.id));
     const s = new Scope(student.tenantId, student.id);
-    return PresentationService.staffCards(s, visible);
+    return PresentationService.staffCards(s, visible, locale);
   },
 
   /**
@@ -148,7 +149,7 @@ export const FacultyService = {
   },
 
   /** IN-APP ONLY, and derived — there is no notification table. */
-  notifications(scope, limit) {
+  notifications(scope, limit, locale = 'en') {
     const roster = StaffScopeResolver.roster(scope);
     if (roster.length === 0) return [];
     const byId = new Map(roster.map((s) => [s.id, s]));
@@ -161,12 +162,14 @@ export const FacultyService = {
       if (!s) continue;
       if (hidden.has(h.requestId)) continue;
       const needsMe = mine.has(h.toState);
-      const kind = h.fromState === null ? 'New request' : (needsMe ? 'Approval required' : 'Workflow update');
+      const kind = h.fromState === null
+        ? I18n.t(locale, 'notif.newRequest')
+        : (needsMe ? I18n.t(locale, 'notif.approvalRequired') : I18n.t(locale, 'notif.workflowUpdate'));
       feed.push({
         at: h.at,
         notice: {
-          kind, title: `${s.name} · ${DisplayLabels.state(h.toState)}`,
-          detail: DisplayLabels.transition(h.fromState, h.toState),
+          kind, title: `${s.name} · ${DisplayLabels.state(h.toState, locale)}`,
+          detail: DisplayLabels.transition(h.fromState, h.toState, locale),
           who: s.name, atFmt: fmt(h.at), href: `/faculty/students/${s.id}`,
         },
       });
@@ -177,7 +180,7 @@ export const FacultyService = {
       feed.push({
         at: a.at,
         notice: {
-          kind: 'Academic write', title: `${s.name} · ${a.kind}`, detail: a.detail,
+          kind: I18n.t(locale, 'notif.academicWrite'), title: `${s.name} · ${a.kind}`, detail: a.detail,
           who: a.staffName, atFmt: fmt(a.at), href: `/faculty/students/${s.id}`,
         },
       });

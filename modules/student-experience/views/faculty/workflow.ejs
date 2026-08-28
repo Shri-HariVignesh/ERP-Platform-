@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="<%= locale %>">
 <head><%- include('head', { title: workflow }) %></head>
 <body>
 <%- include('header') %>
@@ -8,15 +8,13 @@
 
   <section class="hero">
     <h1><%= workflow %></h1>
-    <p class="sub">The same inbox, narrowed to one workflow. The buttons come from the frozen
-      transition matrix intersected with your roles, so you are only ever offered a move that
-      is genuinely yours to make at this stage.</p>
+    <p class="sub"><%= t('workflow.subtitle') %></p>
   </section>
 
   <div class="cards">
-    <% tasks.forEach(function(t) { %><%- include('task', { t: t, back: back }) %><% }) %>
+    <% tasks.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
   </div>
-  <% if (tasks.length === 0) { %><p class="empty">No <%= workflow.toLowerCase() %> request is waiting on you.</p><% } %>
+  <% if (tasks.length === 0) { %><p class="empty"><%= t('workflow.emptyPrefix') %><%= locale === 'hi' ? workflow : workflow.toLowerCase() %><%= t('workflow.emptySuffix') %></p><% } %>
 </main>
 </body>
 </html>

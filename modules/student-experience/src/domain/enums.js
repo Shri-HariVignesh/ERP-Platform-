@@ -40,10 +40,20 @@ const ACTOR_DISPLAY = {
   OMBUDSPERSON: 'Ombudsperson',
 };
 
+const ACTOR_DISPLAY_HI = {
+  SYSTEM: 'कैंपसओएस',
+  STUDENT: 'छात्र',
+  FACULTY: 'कक्षा सलाहकार',
+  HOD: 'विभागाध्यक्ष',
+  INSTITUTION: 'संस्थान',
+  OFFICE: 'परीक्षा कार्यालय',
+  OMBUDSPERSON: 'लोकपाल',
+};
+
 export const Actor = Object.freeze({
   SYSTEM: 'SYSTEM', STUDENT: 'STUDENT', FACULTY: 'FACULTY',
   HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE', OMBUDSPERSON: 'OMBUDSPERSON',
-  display: (a) => ACTOR_DISPLAY[a],
+  display: (a, locale = 'en') => (locale === 'hi' ? ACTOR_DISPLAY_HI[a] : ACTOR_DISPLAY[a]),
 });
 
 export const Event = Object.freeze({
@@ -76,11 +86,20 @@ const DOC_DISPLAY = {
   INTERNSHIP_VERIFICATION: 'Internship Verification Certificate',
 };
 
+const DOC_DISPLAY_HI = {
+  BONAFIDE: 'बोनाफाइड प्रमाणपत्र',
+  HALL_TICKET: 'हॉल टिकट',
+  FEE_RECEIPT: 'शुल्क रसीद',
+  TRANSCRIPT: 'ट्रांसक्रिप्ट',
+  CONDUCT_CERTIFICATE: 'आचरण प्रमाणपत्र',
+  INTERNSHIP_VERIFICATION: 'इंटर्नशिप सत्यापन प्रमाणपत्र',
+};
+
 export const DocType = Object.freeze({
   BONAFIDE: 'BONAFIDE', HALL_TICKET: 'HALL_TICKET', FEE_RECEIPT: 'FEE_RECEIPT',
   TRANSCRIPT: 'TRANSCRIPT', CONDUCT_CERTIFICATE: 'CONDUCT_CERTIFICATE',
   INTERNSHIP_VERIFICATION: 'INTERNSHIP_VERIFICATION',
-  display: (d) => DOC_DISPLAY[d],
+  display: (d, locale = 'en') => (locale === 'hi' ? DOC_DISPLAY_HI[d] : DOC_DISPLAY[d]),
   values: () => ['BONAFIDE', 'HALL_TICKET', 'FEE_RECEIPT', 'TRANSCRIPT', 'CONDUCT_CERTIFICATE',
     'INTERNSHIP_VERIFICATION'],
 });
@@ -108,6 +127,13 @@ const STAFF_ROLE_DISPLAY = {
   RTI_OFFICER: 'RTI Cell', OMBUDSPERSON: 'Ombudsperson',
 };
 
+const STAFF_ROLE_DISPLAY_HI = {
+  FACULTY: 'फैकल्टी', HOD: 'विभागाध्यक्ष', INSTITUTION: 'संस्थान', OFFICE: 'परीक्षा कार्यालय',
+  ICC: 'आंतरिक शिकायत समिति', ANTI_RAGGING: 'रैगिंग-रोधी समिति',
+  SC_ST_CELL: 'SC/ST सेल', EQUAL_OPPORTUNITY_CELL: 'समान अवसर सेल',
+  RTI_OFFICER: 'RTI सेल', OMBUDSPERSON: 'लोकपाल',
+};
+
 /** Each constant maps to EXACTLY ONE Actor of the frozen matrix. Never STUDENT, never SYSTEM. */
 export const StaffRole = Object.freeze({
   FACULTY: 'FACULTY', HOD: 'HOD', INSTITUTION: 'INSTITUTION', OFFICE: 'OFFICE',
@@ -115,7 +141,7 @@ export const StaffRole = Object.freeze({
   EQUAL_OPPORTUNITY_CELL: 'EQUAL_OPPORTUNITY_CELL', RTI_OFFICER: 'RTI_OFFICER',
   OMBUDSPERSON: 'OMBUDSPERSON',
   actor: (r) => STAFF_ROLE_ACTOR[r],
-  display: (r) => STAFF_ROLE_DISPLAY[r],
+  display: (r, locale = 'en') => (locale === 'hi' ? STAFF_ROLE_DISPLAY_HI[r] : STAFF_ROLE_DISPLAY[r]),
 });
 
 export const AcademicAuditKind = Object.freeze({

@@ -3,7 +3,7 @@
   <li class="st <%= s.status %>">
     <span class="dot"></span>
     <span class="lbl"><%= s.label %></span>
-    <% if (s.status === 'skipped') { %><span class="tag">skipped by automation</span><% } %>
+    <% if (s.status === 'skipped') { %><span class="tag"><%= t('timeline.skippedByAutomation') %></span><% } %>
   </li>
   <% }) %>
 </ol>

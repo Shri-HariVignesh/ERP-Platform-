@@ -15,6 +15,7 @@ import { IllegalTransitionException } from '../engine/IllegalTransitionException
 import { requireStaff } from './middleware/auth.js';
 import { redirectAfterSave } from './middleware/sessionRedirect.js';
 import { resolveStaff } from './safeRedirect.js';
+import { DisplayLabels } from '../view/DisplayLabels.js';
 
 export const facultyRoutes = Router();
 facultyRoutes.use(requireStaff);
@@ -29,7 +30,7 @@ function base(req, res, nav) {
   res.locals.staff = scope;
   res.locals.tenant = tenantRepo.findById(scope.tenantId);
   res.locals.nav = nav;
-  res.locals.roleLabels = [...scope.roles].map((r) => StaffRole.display(r));
+  res.locals.roleLabels = [...scope.roles].map((r) => StaffRole.display(r, res.locals.locale));
   res.locals.canLeave = scope.hasRole(StaffRole.FACULTY) || scope.hasRole(StaffRole.HOD);
   res.locals.canInternship = scope.hasRole(StaffRole.FACULTY) || scope.hasRole(StaffRole.INSTITUTION);
   res.locals.canAuthor = scope.authors();
@@ -47,8 +48,8 @@ function enc(v) { return encodeURIComponent(v); }
 
 facultyRoutes.get('/', (req, res) => {
   const scope = base(req, res, 'home');
-  res.locals.tasks = FacultyService.inbox(scope).slice(0, 5);
-  res.locals.recent = FacultyService.notifications(scope, 6);
+  res.locals.tasks = FacultyService.inbox(scope, null, res.locals.locale).slice(0, 5);
+  res.locals.recent = FacultyService.notifications(scope, 6, res.locals.locale);
   res.locals.roster = StaffScopeResolver.roster(scope).length;
   res.locals.classes = scope.classes();
   res.render('faculty/home');
@@ -60,7 +61,7 @@ facultyRoutes.get('/tasks', (req, res) => {
   const scope = base(req, res, 'tasks');
   const filter = req.query.filter;
   const type = (filter && filter !== 'ALL') ? filter : null;
-  res.locals.tasks = FacultyService.inbox(scope, type);
+  res.locals.tasks = FacultyService.inbox(scope, type, res.locals.locale);
   res.locals.filter = type ?? 'ALL';
   res.locals.types = Object.values(RequestType);
   res.locals.back = '/faculty/tasks';
@@ -118,7 +119,7 @@ facultyRoutes.get('/students/:id', (req, res) => {
   res.locals.marks = AcademicService.publishedMarks(studentScope);
   res.locals.records = AcademicService.records(studentScope);
   res.locals.documents = AcademicService.documents(studentScope);
-  res.locals.cards = FacultyService.requestsOf(scope, s);
+  res.locals.cards = FacultyService.requestsOf(scope, s, res.locals.locale);
   res.render('faculty/student');
 });
 
@@ -126,16 +127,16 @@ facultyRoutes.get('/students/:id', (req, res) => {
 
 facultyRoutes.get('/leave', (req, res) => {
   const scope = base(req, res, 'leave');
-  res.locals.tasks = FacultyService.inbox(scope, RequestType.LEAVE);
-  res.locals.workflow = 'Leave';
+  res.locals.tasks = FacultyService.inbox(scope, RequestType.LEAVE, res.locals.locale);
+  res.locals.workflow = DisplayLabels.type(RequestType.LEAVE, res.locals.locale);
   res.locals.back = '/faculty/leave';
   res.render('faculty/workflow');
 });
 
 facultyRoutes.get('/internship', (req, res) => {
   const scope = base(req, res, 'internship');
-  res.locals.tasks = FacultyService.inbox(scope, RequestType.INTERNSHIP);
-  res.locals.workflow = 'Internship';
+  res.locals.tasks = FacultyService.inbox(scope, RequestType.INTERNSHIP, res.locals.locale);
+  res.locals.workflow = DisplayLabels.type(RequestType.INTERNSHIP, res.locals.locale);
   res.locals.back = '/faculty/internship';
   res.render('faculty/workflow');
 });
@@ -275,7 +276,7 @@ facultyRoutes.post('/marks', (req, res) => {
 
 facultyRoutes.get('/notifications', (req, res) => {
   const scope = base(req, res, 'notifications');
-  res.locals.notices = FacultyService.notifications(scope, 60);
+  res.locals.notices = FacultyService.notifications(scope, 60, res.locals.locale);
   res.render('faculty/notifications');
 });
 
