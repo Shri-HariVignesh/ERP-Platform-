@@ -8,9 +8,15 @@
   The row is passed in as `task`, never `t` — `t` is the global i18n translate helper
   (res.locals.t, see server.js), and EJS includes inherit the parent's locals, so a local named
   `t` here would shadow it for this template AND everything it includes (fragments/card.ejs).
+
+  Each action form carries data-event/data-tone/data-requires-note so public/js/tasks.js can
+  progressively enhance it into an optimistic delayed-commit action (see the plan: nothing hits
+  the server until the 5s undo window elapses, or the tab is closing). The <form> itself is
+  untouched and still POSTs to the same endpoint exactly as before — with JS off, or before it
+  loads, or if it throws, this is the complete and correct behaviour on its own.
 */
 %>
-<article class="task">
+<article class="task" id="task-<%= task.card.id %>">
   <div class="who-for">
     <% /* A statutory committee's institution-wide grievance reach is not a grant to browse
           this student's full profile — canOpenProfile mirrors that same canSee() boundary. */ %>
@@ -27,7 +33,9 @@
   <% if (task.actionable()) { %>
   <div class="staff-actions">
     <% task.actions.forEach(function(a) { %>
-    <form class="act" action="/faculty/requests/<%= task.card.id %>/act" method="post">
+    <form class="act" action="/faculty/requests/<%= task.card.id %>/act" method="post"
+      data-event="<%= a.event %>" data-tone="<%= a.tone %>" data-requires-note="<%= a.requiresNote %>"
+      data-label="<%= a.label %>">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="event" value="<%= a.event %>">
       <input type="hidden" name="back" value="<%= back %>">

@@ -50,14 +50,14 @@ export const RequestStateMachine = {
     })();
   },
 
-  transition(scope, requestId, event, actor, note, patch = null) {
+  transition(scope, requestId, event, actor, note, patch = null, actedByStaffId = null, actedByStaffName = null) {
     return db.transaction(() => {
       const r = requestRepo.findByIdAndTenantIdAndStudentId(requestId, scope.tenantId, scope.studentId);
       if (!r) {
         throw new IllegalTransitionException(
           `request ${safeForMessage(requestId)} is not visible in this tenant+student scope`);
       }
-      const moved = fire(scope, r, event, actor, note, patch);
+      const moved = fire(scope, r, event, actor, note, patch, actedByStaffId, actedByStaffName);
       return autopilot(scope, moved);
     })();
   },
@@ -66,7 +66,7 @@ export const RequestStateMachine = {
 };
 
 /** Applies exactly one edge, or throws. */
-function fire(scope, r, event, actor, note, patch) {
+function fire(scope, r, event, actor, note, patch, actedByStaffId = null, actedByStaffName = null) {
   const spec = TransitionMatrix.spec(r.type);
   const student = studentRepo.findByIdAndTenantId(r.studentId, r.tenantId);
   if (!student) throw new IllegalTransitionException('student not in scope');
@@ -99,6 +99,7 @@ function fire(scope, r, event, actor, note, patch) {
     note: (!note || !note.trim()) ? null : note.trim(),
     effects: edge.effects.join(', '),
     effectLog: log.join(' '),
+    actedByStaffId, actedByStaffName,
   });
 
   return r;

@@ -3,6 +3,12 @@
   --accent:#0b5fae; --ok:#146c43; --okbg:#e6f3ec; --danger:#b3261e; --dangerbg:#fbeaea;
   --action:#8a5a00; --actionbg:#fdf1dc; --pend:#4a5360; --pendbg:#e9ecf0;
   --radius:4px;
+  /* Motion tokens for the My Tasks overhaul (stepper fill, card slide-out/in, slide-over,
+     command palette, toasts, skeleton shimmer). Nothing in this app exceeds --dur-base — nothing
+     should ever feel like it's "playing an animation" instead of just responding. The
+     prefers-reduced-motion block below collapses every one of these to 0ms in one place, so
+     every component that uses them is automatically motion-safe without its own media query. */
+  --dur-fast:120ms; --dur-base:220ms; --ease-out:cubic-bezier(.16,1,.3,1);
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -10,6 +16,9 @@
     --accent:#5b9bdc; --ok:#4fce93; --okbg:#112920; --danger:#f28b83; --dangerbg:#2c1615;
     --action:#eab766; --actionbg:#2a2010; --pend:#a7b0bb; --pendbg:#1c222a;
   }
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --dur-fast:0ms; --dur-base:0ms; }
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -395,4 +404,164 @@ textarea{resize:vertical}
 @media (max-width:480px){
   .helper{right:12px;bottom:12px}
   .helper-panel{width:min(300px,calc(100vw - 24px))}
+}
+
+/* ======================== My Tasks: stat strip, SLA, stepper, ========================
+   ==================== inline actions, slide-over, command palette ==================== */
+
+/* ---- stat strip ----
+   Reuses the badge-tone palette (--ok/--action/--danger) rather than inventing new colors — the
+   same "success/attention/danger" vocabulary the rest of the app already uses. */
+.stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;margin-bottom:18px}
+.stat-tile{background:var(--panel);border:none;text-align:left;padding:13px 15px;cursor:pointer;
+  font:inherit;color:inherit;min-height:44px;transition:background-color var(--dur-fast)}
+.stat-tile:hover{background:var(--bg)}
+.stat-tile.active{background:var(--bg);box-shadow:inset 0 0 0 2px var(--accent)}
+.stat-tile strong{display:block;font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat-tile span{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+.stat-tile.warn strong{color:var(--danger)}
+
+/* ---- filter/sort bar ---- */
+.taskbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  margin-bottom:16px}
+.taskbar .filters{margin-bottom:0}
+.sortbar{display:flex;align-items:center;gap:8px}
+.sortbar label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:0}
+.sortbar select{width:auto;margin-top:0;padding:6px 8px;font-size:12.5px}
+.sortbar .btn{padding:6px 12px;font-size:12px}
+
+/* ---- collapsible sections ----
+   Native <details>/<summary> — keyboard/AT-accessible and fully functional with no JS. The
+   chevron is a rotated CSS triangle rather than an icon font/SVG sprite, so it costs nothing. */
+.section-group{margin-bottom:14px}
+.section-group summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;
+  padding:10px 2px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted)}
+.section-group summary::-webkit-details-marker{display:none}
+.section-group summary::before{content:"";width:0;height:0;flex:none;
+  border-left:5px solid var(--muted);border-top:4px solid transparent;border-bottom:4px solid transparent;
+  transition:transform var(--dur-fast)}
+.section-group[open] summary::before{transform:rotate(90deg)}
+.section-group summary .count{background:var(--pendbg);color:var(--pend);font-size:10.5px;
+  font-weight:700;padding:1px 7px;border-radius:10px;font-variant-numeric:tabular-nums}
+.section-group .cards{margin-top:4px}
+
+/* ---- SLA aging: left border + chip ----
+   Overrides the badge-tone-driven .card::before rail (only while the card is still open — see
+   card.ejs's `c.isOpen() ? c.slaLevel : ''`), using the SAME three tone tokens as everything
+   else (ok/action/danger) so "fresh/due/overdue" reads as one system with "success/pending/
+   danger" rather than a competing color language. */
+.card[data-sla="fresh"]::before{background:var(--ok)}
+.card[data-sla="due"]::before{background:var(--action)}
+.card[data-sla="overdue"]::before{background:var(--danger)}
+.card-top-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.aging-chip{font-size:10.5px;padding:2px 7px;border-radius:3px;white-space:nowrap;font-weight:600}
+.aging-chip.aging-fresh{background:var(--okbg);color:var(--ok)}
+.aging-chip.aging-due{background:var(--actionbg);color:var(--action)}
+.aging-chip.aging-overdue{background:var(--dangerbg);color:var(--danger)}
+
+/* ---- animated stepper ----
+   .stepper-fill's width is set inline per-card (progressPct) and animated from 0 on load by
+   public/js/tasks.js (skipped under prefers-reduced-motion, in which case the inline width is
+   just the final value from first paint — never a layout jump, only a foregone transition). */
+.stepper-track{height:4px;border-radius:2px;background:var(--pendbg);margin:12px 0 2px;overflow:hidden}
+.stepper-fill{height:100%;background:var(--accent);border-radius:2px;
+  transition:width var(--dur-base) var(--ease-out)}
+.timeline .current .dot{transition:box-shadow var(--dur-base)}
+.stepper-toggle,.stepper-pill{display:none}
+
+/* ---- inline optimistic actions: the card's exit/return animation ----
+   One class drives both directions: adding it (on Approve/Reject/etc.) plays the exit
+   transition; REMOVING it (Undo, or a failed commit restoring the card) plays it in reverse.
+   The node never actually leaves the DOM — collapsing via max-height/opacity means undo needs
+   no re-insertion logic at all, just a class toggle. */
+.task{transition:opacity var(--dur-base) var(--ease-out),max-height var(--dur-base) var(--ease-out),
+  margin var(--dur-base) var(--ease-out);max-height:2000px;opacity:1;overflow:hidden}
+.task.optimistic-out{opacity:0;max-height:0;margin:0;pointer-events:none}
+
+/* ---- toasts ---- */
+.toast-stack{position:fixed;right:20px;bottom:20px;z-index:40;display:flex;flex-direction:column;
+  gap:8px;max-width:min(360px,calc(100vw - 32px))}
+.toast{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);
+  border:1px solid var(--line);border-left:3px solid var(--pend);border-radius:var(--radius);
+  padding:10px 13px;font-size:12.5px;box-shadow:0 4px 16px rgba(0,0,0,.14);
+  animation:toast-in var(--dur-base) var(--ease-out)}
+@keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.toast.action{border-left-color:var(--accent)}
+.toast.error{border-left-color:var(--danger)}
+.toast-msg{flex:1 1 auto;min-width:0}
+.toast-countdown{color:var(--muted);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.toast-action{font:inherit;font-size:12px;font-weight:700;color:var(--accent);background:none;
+  border:none;cursor:pointer;padding:4px 6px;min-height:28px}
+.toast-action:hover{text-decoration:underline}
+
+/* ---- detail slide-over ----
+   Reuses .hist/.trail's own styling wholesale (the cloned markup carries those classes), so
+   this only needs to style the panel chrome itself. */
+.slideover-backdrop{position:fixed;inset:0;background:rgba(10,12,16,.42);z-index:38;
+  opacity:0;transition:opacity var(--dur-base)}
+.slideover-backdrop:not([hidden]){opacity:1}
+/* display:none by default, NOT relying on the [hidden] attribute alone: a plain author-origin
+   `display:` on a class always wins the cascade over the UA stylesheet's [hidden]{display:none}
+   at equal specificity, so a rule like `.slideover{display:flex}` would silently defeat `hidden`
+   and show the panel/palette on every page load regardless of the attribute. `:not([hidden])`
+   is what actually turns it back on.
+
+   The slide transform is driven by a SEPARATE `.open` class, not bundled into `:not([hidden])`
+   with the display change: if display:none->flex and the transform both flipped in the same
+   style recalc, there would be no previous rendered frame for the transition to animate from —
+   it would just pop into place. public/js/tasks.js removes `hidden` first, forces a reflow,
+   then adds `.open` on the next frame so the transform genuinely has something to transition
+   from; closing reverses that (remove `.open`, wait for the transition to finish, then re-add
+   `hidden`) so the exit also plays instead of vanishing instantly. */
+.slideover{display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);
+  border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.16);z-index:39;
+  flex-direction:column;transform:translateX(100%);transition:transform var(--dur-base) var(--ease-out)}
+.slideover:not([hidden]){display:flex}
+.slideover.open{transform:translateX(0)}
+.slideover-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:16px 18px;border-bottom:1px solid var(--line)}
+.slideover-kind{margin:0 0 2px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.slideover-head h2{font-size:15px;margin:0}
+.slideover-close{font:inherit;font-size:20px;line-height:1;background:none;border:none;
+  color:var(--muted);cursor:pointer;padding:6px;min-width:44px;min-height:44px}
+.slideover-close:hover{color:var(--ink)}
+.slideover-body{padding:16px 18px;overflow-y:auto}
+
+/* ---- command palette ---- */
+.cmdk-trigger{display:flex;align-items:center;gap:6px;font:inherit;font-size:12px;
+  padding:6px 10px;border:1px solid var(--line);border-radius:3px;background:var(--panel);
+  color:var(--muted);cursor:pointer;min-height:32px}
+.cmdk-trigger:hover{color:var(--ink);border-color:var(--accent)}
+.cmdk-trigger kbd{font:inherit;font-size:10.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:2px;padding:1px 4px}
+.cmdk-backdrop{position:fixed;inset:0;background:rgba(10,12,16,.42);z-index:48;
+  opacity:0;transition:opacity var(--dur-base)}
+.cmdk-backdrop:not([hidden]){opacity:1}
+/* display:none by default — same [hidden]-vs-author-CSS cascade issue as .slideover above. */
+.command-palette{display:none;position:fixed;top:12vh;left:50%;transform:translateX(-50%);width:min(560px,92vw);
+  max-height:66vh;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  box-shadow:0 12px 40px rgba(0,0,0,.24);z-index:49;flex-direction:column;overflow:hidden}
+.command-palette:not([hidden]){display:flex}
+.cmdk-inputwrap{border-bottom:1px solid var(--line)}
+.cmdk-input{width:100%;border:none;padding:16px 18px;font:inherit;font-size:15px;
+  background:transparent;color:var(--ink)}
+.cmdk-input:focus{outline:none}
+.cmdk-results{overflow-y:auto;padding:6px}
+.cmdk-group{padding:8px 10px 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.cmdk-item{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  padding:9px 10px;border-radius:4px;text-decoration:none;color:inherit;font-size:13px}
+.cmdk-item:hover,.cmdk-item.active{background:var(--bg)}
+.cmdk-item-secondary{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.cmdk-empty{padding:16px;color:var(--muted);font-size:12.5px;text-align:center}
+
+@media (max-width:640px){
+  .stepper-toggle,.stepper-pill{all:unset;display:inline-flex;align-items:center;gap:6px;
+    cursor:pointer;font-size:12px;color:var(--muted);padding:8px 0;min-height:32px}
+  .stepper-toggle{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .stepper{display:none;margin-top:2px}
+  .stepper-toggle:checked ~ .stepper{display:block}
+  .slideover{width:100vw}
 }

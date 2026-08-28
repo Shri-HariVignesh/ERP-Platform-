@@ -1,0 +1,36 @@
+<%
+/*
+  THE ⌘K COMMAND PALETTE. Included once, globally, from faculty/header.ejs (every faculty page)
+  — same "one shared instance, JS toggles visibility" pattern as fragments/helper.ejs already
+  uses for the Helper widget. The "Go to X" nav actions never change per-request, so they are
+  embedded here as a same-origin JSON island (same technique as helper-topics — no fetch for
+  something this static); student/task results come from GET /faculty/search.json as the user
+  types (see facultyRoutes.js).
+*/
+const navActions = [
+  { label: t('nav.dashboard'), href: '/faculty' },
+  { label: t('nav.myTasks'), href: '/faculty/tasks' },
+  { label: t('nav.students'), href: '/faculty/students' },
+];
+if (typeof canLeave !== 'undefined' && canLeave) navActions.push({ label: t('nav.leave'), href: '/faculty/leave' });
+if (typeof canInternship !== 'undefined' && canInternship) navActions.push({ label: t('nav.internship'), href: '/faculty/internship' });
+if (typeof canAuthor !== 'undefined' && canAuthor) {
+  navActions.push({ label: t('nav.attendance'), href: '/faculty/attendance' });
+  navActions.push({ label: t('nav.marksResults'), href: '/faculty/marks' });
+}
+navActions.push({ label: t('nav.notifications'), href: '/faculty/notifications' });
+%>
+<div id="cmdk-backdrop" class="cmdk-backdrop" hidden></div>
+<div id="cmdk" class="command-palette" hidden role="dialog" aria-modal="true" aria-label="<%= t('cmdk.trigger') %>">
+  <div class="cmdk-inputwrap">
+    <input type="text" id="cmdk-input" class="cmdk-input" placeholder="<%= t('cmdk.placeholder') %>"
+      autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cmdk-results" aria-autocomplete="list">
+  </div>
+  <div id="cmdk-results" class="cmdk-results" role="listbox"></div>
+</div>
+<script type="application/json" id="cmdk-data">
+  <%- JSON.stringify({
+    navActions,
+    labels: { students: t('cmdk.students'), tasks: t('cmdk.tasks'), goTo: t('cmdk.goTo'), noResults: t('cmdk.noResults') },
+  }).replace(/</g, '\\u003c') %>
+</script>

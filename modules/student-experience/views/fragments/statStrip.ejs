@@ -1,0 +1,29 @@
+<%
+/*
+  THE STAT STRIP. Four numbers computed server-side (facultyRoutes.js's /tasks handler) from the
+  SAME task lists the sections below render — nothing here is a separate query or a separate
+  source of truth. Each tile is a real <button> (not a styled <div>) so it's keyboard-focusable
+  and gets a free click handler with no JS required to render correctly; public/js/tasks.js
+  progressively enhances it into a client-side filter toggle (data-stat is the hook) and adds
+  the count-up animation. Numbers are printed as the real value up front — count-up is a visual
+  flourish layered on top by JS, never the only way the number becomes visible.
+*/
+%>
+<div class="stat-strip" role="group" aria-label="<%= t('nav.myTasks') %> summary">
+  <button type="button" class="stat-tile" data-stat="awaiting" aria-pressed="false">
+    <strong data-count="<%= stats.awaiting %>"><%= stats.awaiting %></strong>
+    <span><%= t('stat.awaiting') %></span>
+  </button>
+  <button type="button" class="stat-tile <%= stats.overdue > 0 ? 'warn' : '' %>" data-stat="overdue" aria-pressed="false">
+    <strong data-count="<%= stats.overdue %>"><%= stats.overdue %></strong>
+    <span><%= t('stat.overdue') %></span>
+  </button>
+  <button type="button" class="stat-tile" data-stat="resolvedWeek" aria-pressed="false">
+    <strong data-count="<%= stats.resolvedWeek %>"><%= stats.resolvedWeek %></strong>
+    <span><%= t('stat.resolvedWeek') %></span>
+  </button>
+  <button type="button" class="stat-tile" data-stat="totalOpen" aria-pressed="false">
+    <strong data-count="<%= stats.totalOpen %>"><%= stats.totalOpen %></strong>
+    <span><%= t('stat.totalOpen') %></span>
+  </button>
+</div>

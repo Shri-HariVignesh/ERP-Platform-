@@ -1,20 +1,38 @@
 <%
 // THE shared request card. Consumes only the normalized RequestCard. There is no branch on
 // request type anywhere in this file — that is the point.
+//
+// data-sla drives the SLA-aging left border (public/css/app.css) — only set while the request
+// is still open; a closed card's border stays keyed off its badge tone (success/danger) instead,
+// since "aging" stops meaning anything once it's resolved. data-request-id is how public/js/
+// tasks.js finds this card for the inline-action pending queue and the detail slide-over.
 %>
-<article class="card">
+<article class="card" id="card-<%= c.id %>" data-request-id="<%= c.id %>" data-sla="<%= c.isOpen() ? c.slaLevel : '' %>">
   <div class="card-top">
     <div>
       <span class="kind"><%= c.typeLabel %></span>
       <h3><%= c.title %></h3>
       <p class="sub"><%= c.subtitle %></p>
     </div>
-    <span class="badge <%= c.badgeTone %>"><%= c.stateLabel %></span>
+    <div class="card-top-right">
+      <span class="badge <%= c.badgeTone %>"><%= c.stateLabel %></span>
+      <% if (c.isOpen()) { %><span class="aging-chip aging-<%= c.slaLevel %>"><%= c.agingLabel %></span><% } %>
+    </div>
   </div>
 
   <p class="headline"><%= c.headline %></p>
 
-  <%- include('timeline', { steps: c.steps }) %>
+  <%
+  /* Mobile-collapsed "Step X of Y" pill: a checkbox-hack, same technique the sidebar nav already
+     uses (see app.css's .navtoggle) — no-JS-safe by construction, and each card needs its own
+     checkbox id since many render on one page. */
+  %>
+  <input type="checkbox" id="stepper-toggle-<%= c.id %>" class="stepper-toggle" aria-hidden="true">
+  <label for="stepper-toggle-<%= c.id %>" class="stepper-pill"><%= c.stepSummary %></label>
+  <div class="stepper">
+    <div class="stepper-track"><div class="stepper-fill" style="width:<%= c.progressPct %>%"></div></div>
+    <%- include('timeline', { steps: c.steps }) %>
+  </div>
 
   <% if (c.artifacts.length > 0) { %>
   <ul class="artifacts">

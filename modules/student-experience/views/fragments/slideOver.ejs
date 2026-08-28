@@ -1,0 +1,20 @@
+<%
+/*
+  THE DETAIL SLIDE-OVER's empty shell. public/js/tasks.js fills #slideover-body by cloning the
+  clicked card's OWN already-rendered `.trail` markup (fragments/card.ejs) — there is no separate
+  server round-trip and no separate template for this content, it is the exact same timeline the
+  student sees, just presented in a panel instead of an inline <details>. Hidden by default so a
+  no-JS visitor never sees an inert panel; JS removes `hidden` when it opens one.
+*/
+%>
+<div id="slideover-backdrop" class="slideover-backdrop" hidden></div>
+<aside id="slideover" class="slideover" hidden role="dialog" aria-modal="true" aria-labelledby="slideover-title">
+  <header class="slideover-head">
+    <div>
+      <p class="slideover-kind" id="slideover-kind"></p>
+      <h2 id="slideover-title"></h2>
+    </div>
+    <button type="button" id="slideover-close" class="slideover-close" aria-label="<%= t('action.close') %>">&times;</button>
+  </header>
+  <div id="slideover-body" class="slideover-body"></div>
+</aside>

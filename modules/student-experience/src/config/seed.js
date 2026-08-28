@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { tenantRepo } from '../repo/tenantRepo.js';
 import { studentRepo } from '../repo/studentRepo.js';
+import { requestRepo } from '../repo/requestRepo.js';
 import { studentAccountRepo } from '../repo/studentAccountRepo.js';
 import { staffUserRepo } from '../repo/staffUserRepo.js';
 import { teachingAssignmentRepo } from '../repo/teachingAssignmentRepo.js';
@@ -141,21 +142,32 @@ function grievance(category, subject, body) {
 
 function daysAgo(n) { return day(-n); }
 
+// Staff ids/names attributed to the seed transitions below, so the "Recently closed" section
+// (FacultyService.recentlyClosed(), keyed on request_history.actedByStaffId — see schema.sql)
+// has real content the first time these staff members log in, instead of looking empty on a
+// fresh boot just because the demo data was created by a privileged bootstrap script rather
+// than through the normal staff-authenticated FacultyService.act() path.
+const ANJALI = ['st_anjali', 'Prof. Anjali Menon'];
+const KRISHNAKUMAR = ['st_krishna', 'Dr. R. Krishnakumar'];
+const REGISTRAR = ['st_registrar', 'Dr. Latha Pillai (Registrar)'];
+const EXAM_OFFICE = ['st_exam', 'Examination Office'];
+
 function seedRequests(s, future) {
   // 1. LEAVE — full happy path. Attendance really moves.
   let r = RequestService.create(s, RequestType.LEAVE,
     leave(LeaveType.EVENT, future[1], future[2], 'Represented college at the inter-college hackathon'));
-  r = RequestService.transition(s, r.id, Event.APPROVE, Actor.FACULTY, 'Verified with the event convenor');
-  RequestService.transition(s, r.id, Event.APPROVE, Actor.HOD, null);
+  r = RequestService.transition(s, r.id, Event.APPROVE, Actor.FACULTY, 'Verified with the event convenor', null, ...ANJALI);
+  RequestService.transition(s, r.id, Event.APPROVE, Actor.HOD, null, null, ...KRISHNAKUMAR);
 
   // 2. LEAVE — parked mid-flow, waiting on the HOD.
   r = RequestService.create(s, RequestType.LEAVE,
     leave(LeaveType.PERSONAL, future[6], future[8], "Sister's wedding at Thrissur"));
-  RequestService.transition(s, r.id, Event.APPROVE, Actor.FACULTY, 'Dates clash with no internals');
+  RequestService.transition(s, r.id, Event.APPROVE, Actor.FACULTY, 'Dates clash with no internals', null, ...ANJALI);
 
   // 3. LEAVE — the rejection path.
   r = RequestService.create(s, RequestType.LEAVE, leave(LeaveType.PERSONAL, future[11], future[15], 'Family trip to Ooty'));
-  RequestService.transition(s, r.id, Event.REJECT, Actor.FACULTY, 'Overlaps with the Series-II internal exams. Reapply after 30 Nov.');
+  RequestService.transition(s, r.id, Event.REJECT, Actor.FACULTY,
+    'Overlaps with the Series-II internal exams. Reapply after 30 Nov.', null, ...ANJALI);
 
   // 4. INTERNSHIP — awaiting faculty verification.
   RequestService.create(s, RequestType.INTERNSHIP, internship('Zoho Corporation', 'Backend Intern',
@@ -165,13 +177,13 @@ function seedRequests(s, future) {
   r = RequestService.create(s, RequestType.INTERNSHIP, internship('Tata Elxsi', 'Embedded Systems Intern',
     daysAgo(200), daysAgo(150), 'Firmware validation for an automotive ECU.', 'tata-elxsi-scan.pdf'));
   RequestService.transition(s, r.id, Event.RETURN, Actor.FACULTY,
-    'Certificate scan is unreadable and the end date does not match the offer letter. Upload a clear copy.');
+    'Certificate scan is unreadable and the end date does not match the offer letter. Upload a clear copy.', null, ...ANJALI);
 
   // 6. INTERNSHIP — fully verified: academic record written, verifyId + QR issued.
   r = RequestService.create(s, RequestType.INTERNSHIP, internship('Infosys', 'Full-Stack Intern',
     daysAgo(330), daysAgo(240), 'Built an internal dashboard with React and Spring Boot.', 'infosys-completion-certificate.pdf'));
-  r = RequestService.transition(s, r.id, Event.VERIFY, Actor.FACULTY, 'Certificate matches the offer letter');
-  RequestService.transition(s, r.id, Event.APPROVE, Actor.INSTITUTION, null);
+  r = RequestService.transition(s, r.id, Event.VERIFY, Actor.FACULTY, 'Certificate matches the offer letter', null, ...ANJALI);
+  RequestService.transition(s, r.id, Event.APPROVE, Actor.INSTITUTION, null, null, ...REGISTRAR);
 
   // 7. DOCUMENT — bonafide. Zero human touches; already READY.
   RequestService.create(s, RequestType.DOCUMENT, doc(DocType.BONAFIDE, 'Passport application', 2));
@@ -181,12 +193,16 @@ function seedRequests(s, future) {
 
   // 9. DOCUMENT — hall ticket, approved by the office so the Academic card is populated.
   r = RequestService.create(s, RequestType.DOCUMENT, doc(DocType.HALL_TICKET, 'End semester examinations', 1));
-  RequestService.transition(s, r.id, Event.APPROVE, Actor.OFFICE, 'Dues cleared for the exam term');
+  RequestService.transition(s, r.id, Event.APPROVE, Actor.OFFICE, 'Dues cleared for the exam term', null, ...EXAM_OFFICE);
 
-  // 10. GRIEVANCE — auto-assigned to a desk.
-  RequestService.create(s, RequestType.GRIEVANCE, grievance(GrievanceCategory.HOSTEL,
+  // 10. GRIEVANCE — auto-assigned to a desk. Backdated 6 days (matching its own subject line)
+  // so the SLA/aging feature has a genuinely overdue item to show on a fresh boot — every other
+  // seeded request is stamped "now" by RequestStateMachine.create(), which would otherwise make
+  // nothing look overdue immediately after a restart.
+  r = RequestService.create(s, RequestType.GRIEVANCE, grievance(GrievanceCategory.HOSTEL,
     'No hot water in Block C for six days',
     'The heater on the second floor of Block C has been down since last Tuesday. Two complaints in the register have gone unanswered.'));
+  requestRepo.save({ ...r, createdAt: daysAgo(6) });
 }
 
 /** SNIT staff: between them cover every Actor of the frozen matrix, plus a cross-department and a two-role case. */

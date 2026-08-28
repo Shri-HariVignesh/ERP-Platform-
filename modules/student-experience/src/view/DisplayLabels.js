@@ -288,6 +288,20 @@ export const DisplayLabels = {
     return locale === 'hi' ? `वर्तमान में ${handler} के पास।` : `Currently with ${handler}.`;
   },
 
+  /** The SLA aging chip's text — "6 days open" / "Opened today". */
+  agingLabel(ageDays, locale = 'en') {
+    if (ageDays <= 0) return locale === 'hi' ? 'आज खोला गया' : 'Opened today';
+    if (locale === 'hi') return `${ageDays} दिन से खुला`;
+    return `${ageDays} day${ageDays === 1 ? '' : 's'} open`;
+  },
+
+  /** The mobile stepper's collapsed pill — "Step 2 of 5 · Faculty review". */
+  stepSummary(index1Based, total, stepLabel, locale = 'en') {
+    return locale === 'hi'
+      ? `चरण ${index1Based} / ${total} · ${stepLabel}`
+      : `Step ${index1Based} of ${total} · ${stepLabel}`;
+  },
+
   /**
    * Reviewer-facing asides the engine writes into its effect log; hidden from students. This
    * text is generated once, in English, at transition time and stored (RequestHistory.effectLog)

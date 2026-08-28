@@ -16,6 +16,7 @@ import { requireStaff } from './middleware/auth.js';
 import { redirectAfterSave } from './middleware/sessionRedirect.js';
 import { resolveStaff } from './safeRedirect.js';
 import { DisplayLabels } from '../view/DisplayLabels.js';
+import { I18n } from '../view/i18n.js';
 
 export const facultyRoutes = Router();
 facultyRoutes.use(requireStaff);
@@ -57,15 +58,84 @@ facultyRoutes.get('/', (req, res) => {
 
 /* ------------------------------ 2. MY TASKS ------------------------------ */
 
+const SORTS = new Set(['urgency', 'newest', 'type']);
+const SLA_RANK = { overdue: 0, due: 1, fresh: 2 };
+const TYPE_ORDER = Object.values(RequestType);
+
+/** Sorts an already-built task list in place semantics — 'urgency' (default): overdue first,
+ * then due-soon, then fresh, oldest-within-a-bucket first (the most stale item in its bucket is
+ * the one that's been waiting longest). 'newest'/'type' are the two other options the sort
+ * control on My Tasks offers. */
+function sortTasks(tasks, sort) {
+  const list = [...tasks];
+  if (sort === 'newest') {
+    list.sort((a, b) => b.card.createdAtRaw.localeCompare(a.card.createdAtRaw));
+  } else if (sort === 'type') {
+    list.sort((a, b) => TYPE_ORDER.indexOf(a.card.type) - TYPE_ORDER.indexOf(b.card.type)
+      || a.card.createdAtRaw.localeCompare(b.card.createdAtRaw));
+  } else {
+    list.sort((a, b) => (SLA_RANK[a.card.slaLevel] - SLA_RANK[b.card.slaLevel])
+      || a.card.createdAtRaw.localeCompare(b.card.createdAtRaw));
+  }
+  return list;
+}
+
 facultyRoutes.get('/tasks', (req, res) => {
   const scope = base(req, res, 'tasks');
+  const locale = res.locals.locale;
   const filter = req.query.filter;
   const type = (filter && filter !== 'ALL') ? filter : null;
-  res.locals.tasks = FacultyService.inbox(scope, type, res.locals.locale);
+  const sort = SORTS.has(req.query.sort) ? req.query.sort : 'urgency';
+
+  const tasks = sortTasks(FacultyService.inbox(scope, type, locale), sort);
+  const needsAction = tasks.filter((t) => t.actionable());
+  const waitingOnOthers = tasks.filter((t) => !t.actionable());
+  // Already ordered most-recently-acted-on first by FacultyService.recentlyClosed() itself
+  // (it walks request_history DESC by `at`) — no need to re-sort.
+  const recentlyClosed = FacultyService.recentlyClosed(scope, locale);
+
+  res.locals.needsAction = needsAction;
+  res.locals.waitingOnOthers = waitingOnOthers;
+  res.locals.recentlyClosed = recentlyClosed;
+  res.locals.stats = {
+    awaiting: needsAction.length,
+    overdue: tasks.filter((t) => t.card.slaLevel === 'overdue').length,
+    resolvedWeek: recentlyClosed.length,
+    totalOpen: tasks.length,
+  };
   res.locals.filter = type ?? 'ALL';
   res.locals.types = Object.values(RequestType);
+  res.locals.sort = sort;
   res.locals.back = '/faculty/tasks';
   res.render('faculty/tasks');
+});
+
+/**
+ * The ⌘K command palette's data source. Same in-memory substring match as /faculty/students'
+ * roster search, plus a pass over the inbox by student name / card title / type label. GET, so
+ * no CSRF token needed. Capped small — this backs a quick-jump palette, not a full search UI.
+ */
+facultyRoutes.get('/search.json', (req, res) => {
+  const scope = StaffScopeResolver.current(req.session.principal);
+  const locale = res.locals.locale;
+  const q = (req.query.q ?? '').trim().toLowerCase();
+  if (!q) return res.json({ students: [], tasks: [] });
+
+  const students = StaffScopeResolver.roster(scope)
+    .filter((s) => s.name.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q))
+    .slice(0, 8)
+    .map((s) => ({ id: s.id, name: s.name, rollNo: s.rollNo, href: `/faculty/students/${s.id}` }));
+
+  const tasks = FacultyService.inbox(scope, null, locale)
+    .filter((t) => t.studentName.toLowerCase().includes(q)
+      || t.card.title.toLowerCase().includes(q) || t.card.typeLabel.toLowerCase().includes(q))
+    .slice(0, 8)
+    .map((t) => ({
+      id: t.card.id, title: t.card.title, typeLabel: t.card.typeLabel, studentName: t.studentName,
+      href: `/faculty/tasks#task-${t.card.id}`,
+    }));
+
+  res.json({ students, tasks });
 });
 
 /* ------------------------------ 3. STUDENTS ------------------------------ */
@@ -285,15 +355,41 @@ facultyRoutes.get('/notifications', (req, res) => {
 /**
  * EVERY staff decision, for every workflow, goes through here. The body carries an event and
  * an optional note — never an actor. The actor is derived from the session.
+ *
+ * Two response shapes, same underlying call: My Tasks' inline optimistic actions (public/js/
+ * tasks.js) POST here with `Accept: application/json` — deliberately an EXACT header match, not
+ * Express's fuzzy req.accepts(), because a normal browser form submission's Accept header always
+ * includes text/html too and must never accidentally take the JSON branch. Everything else (the
+ * plain <form> in faculty/task.ejs, with JS off or failed to load) gets the original
+ * flash+redirect — that form still works exactly as it always has, unchanged.
  */
 facultyRoutes.post('/requests/:id/act', (req, res) => {
+  const wantsJson = req.get('Accept') === 'application/json';
   const scope = StaffScopeResolver.current(req.session.principal);
   const { event, note, back } = req.body;
   try {
     FacultyService.act(scope, req.params.id, event, note);
+    if (wantsJson) return res.json({ ok: true });
     req.session.flash = 'Done — the request has moved on.';
   } catch (e) {
-    if (!(e instanceof IllegalTransitionException)) throw e;
+    // The optimistic My Tasks flow (wantsJson) can genuinely race itself: the button was valid
+    // when the page rendered, but by the time the deferred commit actually fires — up to 5s
+    // later, or later still via sessionStorage reconciliation on a fresh load — the request may
+    // have moved on, through this staff member's own earlier action, someone else's, or a scope
+    // change. That surfaces as EITHER an IllegalTransitionException (the engine's own transition
+    // guard) or a StaffAccessException (StaffScopeResolver.actorFor() can no longer find a
+    // matching actor for the event from the request's current state) — both mean the same thing
+    // to this specific caller: "not actionable any more", not a real error. The traditional
+    // <form> POST path (!wantsJson) is UNCHANGED from before this feature — only
+    // IllegalTransitionException was ever caught there, and still is.
+    if (wantsJson && (e instanceof IllegalTransitionException || e instanceof StaffAccessException)) {
+      return res.status(409).json({ ok: false, code: 'CONFLICT', message: I18n.t(res.locals.locale, 'toast.alreadyHandled') });
+    }
+    if (!(e instanceof IllegalTransitionException)) {
+      if (!wantsJson) throw e;
+      console.error(e);
+      return res.status(500).json({ ok: false, code: 'ERROR', message: I18n.t(res.locals.locale, 'toast.error') });
+    }
     req.session.error = 'That move is not allowed from this stage.';
   }
   redirectAfterSave(req, res, resolveStaff(back ?? '/faculty/tasks'));

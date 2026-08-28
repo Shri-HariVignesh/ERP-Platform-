@@ -19,11 +19,20 @@ export const requestHistoryRepo = {
       ORDER BY id DESC`).all(tenantId, ...studentIds);
   },
 
+  /** Every transition a specific staff member has personally fired, most recent first — backs
+   * FacultyService.recentlyClosed(). */
+  findByTenantIdAndActedByStaffIdOrderByAtDesc(tenantId, staffId) {
+    return db.prepare(`SELECT * FROM request_history WHERE tenantId=? AND actedByStaffId=?
+      ORDER BY at DESC`).all(tenantId, staffId);
+  },
+
   save(h) {
     const info = db.prepare(`INSERT INTO request_history
-      (requestId, tenantId, studentId, fromState, toState, actor, at, note, effects, effectLog)
-      VALUES (@requestId,@tenantId,@studentId,@fromState,@toState,@actor,@at,@note,@effects,@effectLog)`)
-      .run(h);
+      (requestId, tenantId, studentId, fromState, toState, actor, at, note, effects, effectLog,
+       actedByStaffId, actedByStaffName)
+      VALUES (@requestId,@tenantId,@studentId,@fromState,@toState,@actor,@at,@note,@effects,@effectLog,
+       @actedByStaffId,@actedByStaffName)`)
+      .run({ actedByStaffId: null, actedByStaffName: null, ...h });
     h.id = info.lastInsertRowid;
     return h;
   },

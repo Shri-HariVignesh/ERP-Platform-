@@ -44,9 +44,14 @@ export const requestRepo = {
   },
 
   save(r) {
+    // createdAt is in the UPDATE SET too: every normal fire()/transition() call re-saves the
+    // SAME unchanged createdAt it read, so this is a no-op for them, and it's what lets
+    // seed.js backdate a request's createdAt for SLA/aging demo data by re-saving over an
+    // existing id — an `INSERT ... ON CONFLICT DO UPDATE` that didn't touch createdAt would
+    // silently ignore that.
     db.prepare(`INSERT INTO requests (id, tenantId, studentId, type, state, payload, createdAt, updatedAt)
       VALUES (@id,@tenantId,@studentId,@type,@state,@payload,@createdAt,@updatedAt)
-      ON CONFLICT(id) DO UPDATE SET state=@state, payload=@payload, updatedAt=@updatedAt`).run(r);
+      ON CONFLICT(id) DO UPDATE SET state=@state, payload=@payload, createdAt=@createdAt, updatedAt=@updatedAt`).run(r);
     return r;
   },
 };

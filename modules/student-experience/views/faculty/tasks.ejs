@@ -11,17 +11,75 @@
     <p class="sub"><%= t('tasks.subtitle') %></p>
   </section>
 
-  <form class="filters" action="/faculty/tasks" method="get">
-    <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>"><%= t('filter.all') %></button>
-    <% types.forEach(function(t2) { %>
-    <button name="filter" value="<%= t2 %>" class="<%= filter === t2 ? 'on' : '' %>"><%= DisplayLabels.type(t2, locale) %></button>
-    <% }) %>
-  </form>
+  <%- include('../fragments/statStrip', { stats: stats }) %>
 
-  <div class="cards">
-    <% tasks.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
+  <div class="taskbar">
+    <form class="filters" method="get" action="/faculty/tasks">
+      <input type="hidden" name="sort" value="<%= sort %>">
+      <button name="filter" value="ALL" class="<%= filter === 'ALL' ? 'on' : '' %>"><%= t('filter.all') %></button>
+      <% types.forEach(function(t2) { %>
+      <button name="filter" value="<%= t2 %>" class="<%= filter === t2 ? 'on' : '' %>"><%= DisplayLabels.type(t2, locale) %></button>
+      <% }) %>
+    </form>
+
+    <form class="sortbar" method="get" action="/faculty/tasks">
+      <input type="hidden" name="filter" value="<%= filter %>">
+      <label for="sort-select"><%= t('sort.label') %>
+        <select name="sort" id="sort-select">
+          <option value="urgency" <%= sort === 'urgency' ? 'selected' : '' %>><%= t('sort.urgency') %></option>
+          <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>><%= t('sort.newest') %></option>
+          <option value="type" <%= sort === 'type' ? 'selected' : '' %>><%= t('sort.type') %></option>
+        </select>
+      </label>
+      <button type="submit" class="btn ghost"><%= t('sort.label') %></button>
+    </form>
   </div>
-  <% if (tasks.length === 0) { %><p class="empty"><%= t('tasks.empty') %></p><% } %>
+
+  <%
+  /*
+    The empty-state <p> is ALWAYS rendered, just `hidden` when the section wasn't empty at page
+    load — never an `if` that omits the element entirely. An inline optimistic action can empty
+    a section client-side (public/js/tasks.js), and it needs an existing element to un-hide
+    rather than having to fabricate translated empty-state markup itself from a data attribute.
+  */
+  %>
+  <details class="section-group" data-section="needsAction" open>
+    <summary><%= t('section.needsAction') %> <span class="count"><%= needsAction.length %></span></summary>
+    <div class="cards">
+      <% needsAction.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
+      <p class="empty" <%= needsAction.length > 0 ? 'hidden' : '' %>><%= t('section.needsAction.empty') %></p>
+    </div>
+  </details>
+
+  <details class="section-group" data-section="waitingOnOthers" <%= waitingOnOthers.length > 0 ? 'open' : '' %>>
+    <summary><%= t('section.waitingOnOthers') %> <span class="count"><%= waitingOnOthers.length %></span></summary>
+    <div class="cards">
+      <% waitingOnOthers.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
+      <p class="empty" <%= waitingOnOthers.length > 0 ? 'hidden' : '' %>><%= t('section.waitingOnOthers.empty') %></p>
+    </div>
+  </details>
+
+  <details class="section-group" data-section="recentlyClosed">
+    <summary><%= t('section.recentlyClosed') %> <span class="count"><%= recentlyClosed.length %></span></summary>
+    <div class="cards">
+      <% recentlyClosed.forEach(function(task) { %><%- include('task', { task: task, back: back }) %><% }) %>
+      <p class="empty" <%= recentlyClosed.length > 0 ? 'hidden' : '' %>><%= t('section.recentlyClosed.empty') %></p>
+    </div>
+  </details>
 </main>
+<%- include('../fragments/slideOver') %>
+<%- include('../fragments/toasts') %>
+<%
+/* Every string public/js/tasks.js renders itself (toast text, aria-live announcements) — the
+   rest of the page's text is server-rendered and already in the right language. */
+const tasksI18n = {
+  queuedPrefix: t('toast.queuedPrefix'), undoingInPrefix: t('toast.undoingInPrefix'),
+  undoingInSuffix: t('toast.undoingInSuffix'), undo: t('toast.undo'), undone: t('toast.undone'),
+  alreadyHandled: t('toast.alreadyHandled'), error: t('toast.error'), retry: t('toast.retry'),
+  reconciling: t('toast.reconciling'),
+};
+%>
+<script type="application/json" id="tasks-i18n"><%- JSON.stringify(tasksI18n).replace(/</g, '\\u003c') %></script>
+<script nonce="<%= cspNonce %>" src="/js/tasks.js"></script>
 </body>
 </html>

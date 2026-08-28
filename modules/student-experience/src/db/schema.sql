@@ -95,7 +95,14 @@ CREATE TABLE request_history (
   at TEXT NOT NULL,
   note TEXT,
   effects TEXT DEFAULT '',
-  effectLog TEXT DEFAULT ''
+  effectLog TEXT DEFAULT '',
+  -- Which specific staff member fired this transition, not just their Actor role (FACULTY,
+  -- HOD, ...) — the role alone can't answer "who approved this." NULL for STUDENT/SYSTEM-fired
+  -- rows and for every row written before this column existed (this is an in-memory demo DB
+  -- reseeded on every boot, so there is no real backfill to do). Name is denormalized alongside
+  -- the id, same as academic_audit.staffId/staffName below, to avoid a join on every read.
+  actedByStaffId TEXT,
+  actedByStaffName TEXT
 );
 CREATE INDEX ix_history_request ON request_history(requestId);
 

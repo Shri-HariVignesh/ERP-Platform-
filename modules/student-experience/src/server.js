@@ -43,6 +43,21 @@ app.use(securityHeaders);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.urlencoded({ extended: false, limit: '64kb' }));
 
+// Locale lives in its own cookie (langRoutes.js), not the session — see the comment there for
+// why: session.regenerate()/destroy() at login/logout would otherwise silently reset it. This
+// has to run before EVERYTHING that can render a response on its own — csrfProtect included:
+// every view (including views/error.ejs) reads res.locals.locale/t unconditionally, so a 403
+// rendered by csrfProtect before this ran would itself throw ("locale is not defined") instead
+// of showing the intended error page.
+app.use((req, res, next) => {
+  const locale = readLocaleCookie(req) === 'hi' ? 'hi' : 'en';
+  res.locals.locale = locale;
+  res.locals.t = (key) => I18n.t(locale, key);
+  res.locals.helperTopicsJson = (audience) => I18n.helperTopicsJson(locale, audience);
+  res.locals.currentPath = req.originalUrl;
+  next();
+});
+
 app.use(session({
   secret: process.env.CAMPUSOS_SESSION_SECRET || 'dev-only-secret-change-in-production',
   resave: false,
@@ -55,17 +70,6 @@ app.use(session({
 
 app.use(csrfToken);
 app.use(csrfProtect);
-
-// Locale lives in its own cookie (langRoutes.js), not the session — see the comment there for
-// why: session.regenerate()/destroy() at login/logout would otherwise silently reset it.
-app.use((req, res, next) => {
-  const locale = readLocaleCookie(req) === 'hi' ? 'hi' : 'en';
-  res.locals.locale = locale;
-  res.locals.t = (key) => I18n.t(locale, key);
-  res.locals.helperTopicsJson = (audience) => I18n.helperTopicsJson(locale, audience);
-  res.locals.currentPath = req.originalUrl;
-  next();
-});
 
 app.use(loginRoutes);
 app.use(portalRoutes);

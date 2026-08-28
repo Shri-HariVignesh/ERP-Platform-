@@ -4,6 +4,7 @@ import { PayloadCodec } from '../payload/PayloadCodec.js';
 import { requestHistoryRepo } from '../repo/requestHistoryRepo.js';
 import { studentRepo } from '../repo/studentRepo.js';
 import { DisplayLabels } from '../view/DisplayLabels.js';
+import { Sla } from './Sla.js';
 
 function fmt(iso) {
   const d = new Date(iso);
@@ -76,6 +77,22 @@ function studentAction(spec, r, locale) {
   };
 }
 
+/** Fraction of the stepper's dots that are filled in, for the animated progress-bar fill. */
+function progressPct(stepList) {
+  if (stepList.length === 0) return 0;
+  const done = stepList.filter((s) => s.status === 'done').length;
+  return Math.round((done / stepList.length) * 100);
+}
+
+/** "Step 2 of 5 · Faculty review" for the mobile-collapsed stepper pill. */
+function stepSummary(stepList, locale) {
+  if (stepList.length === 0) return '';
+  let idx = stepList.findIndex((s) => s.status === 'current' || s.status === 'failed');
+  if (idx === -1) idx = stepList.map((s) => s.status).lastIndexOf('done');
+  if (idx === -1) idx = 0;
+  return DisplayLabels.stepSummary(idx + 1, stepList.length, stepList[idx].label, locale);
+}
+
 function artifacts(raw) {
   return raw.map((a) => ({ ...a, label: DisplayLabels.proof(a.label) }));
 }
@@ -98,6 +115,8 @@ function card(scope, r, name, locale) {
   const spec = TransitionMatrix.spec(r.type);
   const payload = PayloadCodec.read(r.type, r.payload);
   const rows = requestHistoryRepo.findByRequestIdAndTenantIdAndStudentIdOrderByIdAsc(r.id, scope.tenantId, scope.studentId);
+  const stepList = steps(spec, r, rows, locale);
+  const ageDays = Sla.ageDays(r.createdAt);
 
   return {
     id: r.id,
@@ -109,9 +128,16 @@ function card(scope, r, name, locale) {
     stateLabel: DisplayLabels.stateLabel(spec.labelFor(r.state), payload.handledBy(locale), locale),
     badgeTone: tone(spec, r.state),
     headline: headline(spec, r, payload, rows, locale),
-    steps: steps(spec, r, rows, locale),
+    steps: stepList,
+    progressPct: progressPct(stepList),
+    stepSummary: stepSummary(stepList, locale),
+    ageDays,
+    agingLabel: DisplayLabels.agingLabel(ageDays, locale),
+    slaLevel: Sla.levelFor(r.type, r.createdAt),
     studentAction: studentAction(spec, r, locale),
     artifacts: artifacts(payload.artifacts(locale)),
+    createdAtRaw: r.createdAt,
+    updatedAtRaw: r.updatedAt,
     createdAt: fmt(r.createdAt),
     updatedAt: fmt(r.updatedAt),
     trail: trail(rows, name, locale),
