@@ -370,9 +370,12 @@
   const panelBody = document.getElementById('slideover-body');
   const panelClose = document.getElementById('slideover-close');
   let slideOverTrigger = null;
+  let closeTimer = null; // guards against a pending close's hidden=true landing after a re-open
 
   function openSlideOver(cardEl, summaryEl) {
     if (!backdrop || !panel || !panelBody) return;
+    clearTimeout(closeTimer);
+    panel.removeEventListener('transitionend', finishClose);
     slideOverTrigger = summaryEl;
     panelKind.textContent = cardEl.querySelector('.kind')?.textContent || '';
     panelTitle.textContent = cardEl.querySelector('.card-top h3')?.textContent || '';
@@ -382,15 +385,39 @@
     backdrop.hidden = false;
     panel.hidden = false;
     document.body.style.overflow = 'hidden';
+    if (reduceMotion) {
+      panel.classList.add('open');
+    } else {
+      // Removing `hidden` alone commits display:none -> flex at translateX(100%) — .open is
+      // added on the NEXT frame (after a forced reflow) so the transform transition has a real
+      // previous frame to animate from, instead of collapsing both changes into one paint.
+      // eslint-disable-next-line no-unused-expressions
+      panel.offsetHeight;
+      requestAnimationFrame(() => panel.classList.add('open'));
+    }
     panelClose.focus();
   }
+
+  function finishClose() { panel.hidden = true; }
 
   function closeSlideOver() {
     if (!backdrop || !panel) return;
     backdrop.hidden = true;
-    panel.hidden = true;
+    panel.classList.remove('open');
     document.body.style.overflow = '';
     if (slideOverTrigger) slideOverTrigger.focus();
+    if (reduceMotion) {
+      finishClose();
+    } else {
+      // Wait for the close transition to actually finish before re-adding `hidden` (which
+      // snaps display to none) — otherwise the panel would vanish instantly instead of sliding
+      // out. The timeout is a fallback in case transitionend never fires (e.g. the panel was
+      // already off-screen for some other reason). Both are cleared by openSlideOver() if the
+      // panel is reopened before this close finished, so a stale `hidden = true` can never land
+      // after a fresh open.
+      panel.addEventListener('transitionend', finishClose, { once: true });
+      closeTimer = setTimeout(finishClose, 260);
+    }
   }
 
   document.addEventListener('click', (e) => {

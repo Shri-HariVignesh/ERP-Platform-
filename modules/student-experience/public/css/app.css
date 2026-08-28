@@ -503,10 +503,24 @@ textarea{resize:vertical}
 .slideover-backdrop{position:fixed;inset:0;background:rgba(10,12,16,.42);z-index:38;
   opacity:0;transition:opacity var(--dur-base)}
 .slideover-backdrop:not([hidden]){opacity:1}
-.slideover{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);
+/* display:none by default, NOT relying on the [hidden] attribute alone: a plain author-origin
+   `display:` on a class always wins the cascade over the UA stylesheet's [hidden]{display:none}
+   at equal specificity, so a rule like `.slideover{display:flex}` would silently defeat `hidden`
+   and show the panel/palette on every page load regardless of the attribute. `:not([hidden])`
+   is what actually turns it back on.
+
+   The slide transform is driven by a SEPARATE `.open` class, not bundled into `:not([hidden])`
+   with the display change: if display:none->flex and the transform both flipped in the same
+   style recalc, there would be no previous rendered frame for the transition to animate from —
+   it would just pop into place. public/js/tasks.js removes `hidden` first, forces a reflow,
+   then adds `.open` on the next frame so the transform genuinely has something to transition
+   from; closing reverses that (remove `.open`, wait for the transition to finish, then re-add
+   `hidden`) so the exit also plays instead of vanishing instantly. */
+.slideover{display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);
   border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.16);z-index:39;
-  display:flex;flex-direction:column;transform:translateX(100%);transition:transform var(--dur-base) var(--ease-out)}
-.slideover:not([hidden]){transform:translateX(0)}
+  flex-direction:column;transform:translateX(100%);transition:transform var(--dur-base) var(--ease-out)}
+.slideover:not([hidden]){display:flex}
+.slideover.open{transform:translateX(0)}
 .slideover-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
   padding:16px 18px;border-bottom:1px solid var(--line)}
 .slideover-kind{margin:0 0 2px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
@@ -526,9 +540,11 @@ textarea{resize:vertical}
 .cmdk-backdrop{position:fixed;inset:0;background:rgba(10,12,16,.42);z-index:48;
   opacity:0;transition:opacity var(--dur-base)}
 .cmdk-backdrop:not([hidden]){opacity:1}
-.command-palette{position:fixed;top:12vh;left:50%;transform:translateX(-50%);width:min(560px,92vw);
+/* display:none by default — same [hidden]-vs-author-CSS cascade issue as .slideover above. */
+.command-palette{display:none;position:fixed;top:12vh;left:50%;transform:translateX(-50%);width:min(560px,92vw);
   max-height:66vh;background:var(--panel);border:1px solid var(--line);border-radius:6px;
-  box-shadow:0 12px 40px rgba(0,0,0,.24);z-index:49;display:flex;flex-direction:column;overflow:hidden}
+  box-shadow:0 12px 40px rgba(0,0,0,.24);z-index:49;flex-direction:column;overflow:hidden}
+.command-palette:not([hidden]){display:flex}
 .cmdk-inputwrap{border-bottom:1px solid var(--line)}
 .cmdk-input{width:100%;border:none;padding:16px 18px;font:inherit;font-size:15px;
   background:transparent;color:var(--ink)}
