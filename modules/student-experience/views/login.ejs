@@ -27,42 +27,49 @@
     <button class="btn success" type="submit"><%= t('action.signIn') %></button>
   </form>
 
+  <% const demoUser = (username, who) => { %>
+    <form class="demobtn" action="/login/demo" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="username" value="<%= username %>">
+      <button class="btn ghost" type="submit"><span class="step"><%= username %></span><span class="who"><%= who %></span></button>
+    </form>
+  <% } %>
+
   <details class="trail demo">
-    <summary>Demo accounts — students</summary>
-    <ul class="hist">
-      <li><span class="step">snit21cs042</span><span class="who">Hari Prasad · SNIT (CSE, Sem 5)</span></li>
-      <li><span class="step">snit21cs051</span><span class="who">Divya Rajan · SNIT (CSE, Sem 5)</span></li>
-      <li><span class="step">snit21ec017</span><span class="who">Nikhil Varma · SNIT (ECE, Sem 5)</span></li>
-      <li><span class="step">ace22ec118</span><span class="who">Meera Nair · ACE (other tenant)</span></li>
-    </ul>
+    <summary>Demo mode — students (one click, no password)</summary>
+    <div class="hist">
+      <%- demoUser('snit21cs042', 'Hari Prasad · SNIT (CSE, Sem 5)') %>
+      <%- demoUser('snit21cs051', 'Divya Rajan · SNIT (CSE, Sem 5)') %>
+      <%- demoUser('snit21ec017', 'Nikhil Varma · SNIT (ECE, Sem 5)') %>
+      <%- demoUser('ace22ec118', 'Meera Nair · ACE (other tenant)') %>
+    </div>
   </details>
 
   <details class="trail demo">
-    <summary>Demo accounts — staff</summary>
-    <ul class="hist">
-      <li><span class="step">anjali.menon</span><span class="who">Faculty · CSE Sem 5 A</span></li>
-      <li><span class="step">suresh.kumar</span><span class="who">Faculty · CSE Sem 5 A (other subjects)</span></li>
-      <li><span class="step">krishnakumar</span><span class="who">HOD + Faculty · CSE</span></li>
-      <li><span class="step">suresh.babu</span><span class="who">Faculty · ECE (other department)</span></li>
-      <li><span class="step">registrar.snit</span><span class="who">Institution</span></li>
-      <li><span class="step">exam.office</span><span class="who">Examination Office</span></li>
-      <li><span class="step">latha.iyer</span><span class="who">HOD + Faculty · ACE (other tenant)</span></li>
-    </ul>
-    <p class="fineprint">Password for all demo accounts: <code>campus123</code></p>
+    <summary>Demo mode — staff (one click, no password)</summary>
+    <div class="hist">
+      <%- demoUser('anjali.menon', 'Faculty · CSE Sem 5 A') %>
+      <%- demoUser('suresh.kumar', 'Faculty · CSE Sem 5 A (other subjects)') %>
+      <%- demoUser('krishnakumar', 'HOD + Faculty · CSE') %>
+      <%- demoUser('suresh.babu', 'Faculty · ECE (other department)') %>
+      <%- demoUser('registrar.snit', 'Institution') %>
+      <%- demoUser('exam.office', 'Examination Office') %>
+      <%- demoUser('latha.iyer', 'HOD + Faculty · ACE (other tenant)') %>
+    </div>
   </details>
 
   <details class="trail demo">
-    <summary>Demo accounts — statutory committees (UGC)</summary>
-    <ul class="hist">
-      <li><span class="step">icc.chair</span><span class="who">Internal Complaints Committee (POSH)</span></li>
-      <li><span class="step">antiragging.chair</span><span class="who">Anti-Ragging Committee</span></li>
-      <li><span class="step">scst.cell</span><span class="who">SC/ST Cell</span></li>
-      <li><span class="step">equal.opportunity</span><span class="who">Equal Opportunity Cell</span></li>
-      <li><span class="step">rti.officer</span><span class="who">RTI / Public Information Officer</span></li>
-      <li><span class="step">ombudsperson</span><span class="who">Ombudsperson (grievance appeals)</span></li>
-    </ul>
+    <summary>Demo mode — statutory committees, UGC (one click, no password)</summary>
+    <div class="hist">
+      <%- demoUser('icc.chair', 'Internal Complaints Committee (POSH)') %>
+      <%- demoUser('antiragging.chair', 'Anti-Ragging Committee') %>
+      <%- demoUser('scst.cell', 'SC/ST Cell') %>
+      <%- demoUser('equal.opportunity', 'Equal Opportunity Cell') %>
+      <%- demoUser('rti.officer', 'RTI / Public Information Officer') %>
+      <%- demoUser('ombudsperson', 'Ombudsperson (grievance appeals)') %>
+    </div>
     <p class="fineprint">Each sees only the category it is the designated committee for —
-      institution-wide, but nothing else about any student. Password: <code>campus123</code>.</p>
+      institution-wide, but nothing else about any student.</p>
   </details>
 
   <p class="fineprint">A student username is their roll number, lower-case.</p>
