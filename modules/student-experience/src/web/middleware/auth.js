@@ -31,6 +31,20 @@ export function authenticate(username, password) {
   return null;
 }
 
+/**
+ * DEMO MODE: resolves a principal from username alone, no password check. Used only by the
+ * one-click demo-account buttons on the login page — never by the real credentialed form.
+ */
+export function principalForUsername(username) {
+  const staff = staffUserRepo.findByUsername(username);
+  if (staff && staff.active) return { kind: 'staff', staffId: staff.id, tenantId: staff.tenantId };
+
+  const student = studentAccountRepo.findByUsername(username);
+  if (student && student.active) return { kind: 'student', accountId: student.id, tenantId: student.tenantId };
+
+  return null;
+}
+
 /** Requires an authenticated student principal; otherwise redirects to /login. */
 export function requireStudent(req, res, next) {
   if (req.session.principal && req.session.principal.kind === 'student') return next();

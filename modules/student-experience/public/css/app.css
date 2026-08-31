@@ -340,6 +340,11 @@ textarea{resize:vertical}
 .loginbox input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; }
 .loginbox button { margin-top: 18px; width: 100%; }
 .loginbox .demo { margin-top: 20px; }
+.loginbox .demo .hist { gap: 6px; margin-top: 10px; }
+.loginbox .demobtn { margin: 0; }
+.loginbox .demobtn .btn {
+  margin-top: 0; width: 100%; text-align: left; display: flex; align-items: baseline; gap: 8px;
+}
 
 .task { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 0 12px; background: var(--panel); }
 .task .who-for {
