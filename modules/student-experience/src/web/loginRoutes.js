@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, homeFor } from './middleware/auth.js';
+import { authenticate, principalForUsername, homeFor } from './middleware/auth.js';
 
 export const loginRoutes = Router();
 
@@ -19,6 +19,18 @@ loginRoutes.post('/login', (req, res) => {
   // SECURITY: a new session id at login, so a pre-set cookie cannot be ridden into an
   // authenticated session (session-fixation defence). Locale lives in its own cookie
   // (see langRoutes.js), not on the session, specifically so this regenerate can't touch it.
+  req.session.regenerate((err) => {
+    if (err) return res.redirect('/login?error');
+    req.session.principal = principal;
+    res.redirect(homeFor(principal));
+  });
+});
+
+// DEMO MODE: one-click sign-in as a chosen demo account, no password required.
+loginRoutes.post('/login/demo', (req, res) => {
+  const principal = principalForUsername(req.body.username ?? '');
+  if (!principal) return res.redirect('/login?error');
+
   req.session.regenerate((err) => {
     if (err) return res.redirect('/login?error');
     req.session.principal = principal;
